@@ -1,23 +1,29 @@
 <p align="center">
   <img src="https://github.com/openpeeps/PKG/blob/main/.github/logo.png" width="90px"><br>
-  OpenPeeps repository template for developing libraries,<br>projects and other cool things. 👑 Written in Nim language
+  RTMP Client & Server - Real-Time Messaging Protocol for Nim 👑 
 </p>
 
 <p align="center">
-  <code>nimble install {PKG}</code>
+  <code>nimble install rtmp</code>
 </p>
 
 <p align="center">
   <a href="https://github.com/">API reference</a><br>
-  <img src="https://github.com/openpeeps/pistachio/workflows/test/badge.svg" alt="Github Actions">  <img src="https://github.com/openpeeps/pistachio/workflows/docs/badge.svg" alt="Github Actions">
+  <img src="https://github.com/openpeeps/rtmp/workflows/test/badge.svg" alt="Github Actions">  <img src="https://github.com/openpeeps/rtmp/workflows/docs/badge.svg" alt="Github Actions">
 </p>
 
 ## 😍 Key Features
-- [x] Open Source | `MIT` License
-- [x] Written in Nim language
+- Based on Libevent for high performance networking
+- RTMP Client for connecting to RTMP servers
+- RTMP Server for accepting RTMP client connections
+- Zero-Copy file streaming
+- Lighteight and Low-memory footprint
 
 ## Examples
-...
+Here you can find some simple examples to get you started with the RTMP package.
+
+### Create a simple RTMP Client
+_todo_
 
 ### ❤ Contributions & Support
 - 🐛 Found a bug? [Create a new Issue](/issues)
@@ -25,5 +31,5 @@
 - 😎 [Get €20 in cloud credits from Hetzner](https://hetzner.cloud/?ref=Hm0mYGM9NxZ4)
 
 ### 🎩 License
-{PKG} | MIT license. [Made by Humans from OpenPeeps](https://github.com/openpeeps).<br>
+MIT license. [Made by Humans from OpenPeeps](https://github.com/openpeeps).<br>
 Copyright OpenPeeps & Contributors &mdash; All rights reserved.
