@@ -8,6 +8,10 @@ import std/[net, os, sequtils, tables,
         random, times, posix, strutils, uri]
 
 import pkg/libevent/bindings/[event, buffer, bufferevent]
+import ./rtmpplaylist
+
+export rtmpplaylist
+export event_base_dispatch, event_base_free, bufferevent_free
 
 type
   RtmpHandshakeState = enum
@@ -83,23 +87,6 @@ type
     msgLen: uint32
     msgType: uint8
     msgStreamId: uint32
-
-  PlaylistState* = ref object
-    ## Lists of video and audio files
-    videoFiles*: seq[string]
-      ## Lists of video file paths
-    audioFiles*: seq[string]
-      ## Lists of video and audio file paths
-    videoIdx*: int
-      ## Indexes for current video and audio files
-    audioIdx*: int
-      ## Indexes for current video and audio files
-    currentAudioPath*: string
-      ## Path of the current audio file being streamed
-    currentAudioDone*: bool
-      ## Indicates if the current audio file has finished streaming
-    globalTs*: uint32
-      ## Global timestamp for synchronization
   
   ChunkStreamState* = object
     prev: RtmpPacketHeader
@@ -110,8 +97,8 @@ type
       ## Last timestamp delta
 
   RtmpClient* = ref object
-    base: ptr event_base
-    bev: ptr bufferevent
+    base*: ptr event_base
+    bev*: ptr bufferevent
     host: string
     port: int
     handshakeState: RtmpHandshakeState
@@ -1141,30 +1128,6 @@ proc newRtmpClient*(address: string): RtmpClient =
     if bufferevent_socket_connect_hostname(bev, result.base, AF_UNSPEC, uri.hostname.cstring, port.cint) != 0:
       ## debugEcho "[rtmp] Failed to start hostname resolution"
 
-#
-# Playlist State
-#
-proc loadPlaylist(filePath: string): seq[string] =
-  # Load playlist from file (one entry per line), shuffle entries
-  if not fileExists(filePath): return @[]
-  result = readFile(filePath).splitLines().filterIt(it.len > 0)
-  randomize()
-  result.shuffle()
-
-proc nextVideo(ps: PlaylistState): string =
-  # Get next video file from playlist (looping)
-  if ps.videoFiles.len == 0: return ""
-  if ps.videoIdx >= ps.videoFiles.len: ps.videoIdx = 0 # loop
-  result = ps.videoFiles[ps.videoIdx]
-  inc(ps.videoIdx)
-
-proc nextAudio(ps: PlaylistState): string =
-  # Get next audio file from playlist (looping)
-  if ps.audioFiles.len == 0: return ""
-  if ps.audioIdx >= ps.audioFiles.len: ps.audioIdx = 0 # loop
-  result = ps.audioFiles[ps.audioIdx]
-  inc(ps.audioIdx)
-
 proc nowMs(): int64 =
   ## High-resolution monotonic ms to drive pacing (macOS/Linux)
   when declared(posix.clock_gettime):
@@ -1267,7 +1230,7 @@ proc sendTimerCb(fd: cint, what: cshort, arg: pointer) {.cdecl.} =
           client.sendTimer = nil
           ## debugEcho "[rtmp] Pacer stopped"
 
-proc startPacer(client: RtmpClient, initCb: proc(c: RtmpClient) = nil) =
+proc startPacer*(client: RtmpClient, initCb: proc(c: RtmpClient) = nil) =
   # call once when publishing/starting playback to initialize the clock and timer
   if client.sendTimer == nil:
     client.wallOriginMs = nowMs() - int64(client.ps.globalTs) # map current globalTs to now

@@ -355,7 +355,6 @@ proc getTxnId(vals: seq[AMF0Value]): float64 =
 # 
 # Read callback
 # 
-
 proc bev_read_cb(bev: ptr bufferevent, ctx: pointer) {.cdecl.} =
   var conn = cast[ConnCtx](ctx)
   if conn == nil:
@@ -364,27 +363,14 @@ proc bev_read_cb(bev: ptr bufferevent, ctx: pointer) {.cdecl.} =
       state: RtmpConnState(
         peerChunkSize: RTMP_DEFAULT_CHUNK_SIZE,
         localChunkSize: RTMP_DEFAULT_CHUNK_SIZE, # keep 128 until you successfully send SetChunkSize
-        windowAckSize: 0,
-        bytesReceivedSinceAck: 0,
         streams: initTable[int, pointer]()
       ),
       inbuf: bufferevent_get_input(bev),
       outbuf: bufferevent_get_output(bev),
       hsState: HS_INIT,
-      partialHdr: @[],
-      partialMsg: @[],
-      expectedMsgLen: 0,
-      msgTypeId: 0,
-      msgStreamId: 0,
-      chunkCtx: nil,
-      serverS1: @[],
       nextStreamId: 1,
       connId: gNextConnId,
       closed: false,
-      closeReason: "",
-      publishedStreamName: "",
-      publishedStreamId: 0,
-      subscriptions: initTable[string, int]()
     )
     gNextConnId.inc
     conn = local
