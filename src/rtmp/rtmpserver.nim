@@ -4,6 +4,13 @@
 #          Made by Humans from OpenPeeps
 #          https://github.com/openpeeps/rtmp
 
+## This module implements RTMP server functionality, including connection handling,
+## RTMP message parsing, and a simple pub/sub mechanism for streams.
+## 
+## It uses libevent for asynchronous network I/O and supports basic RTMP commands and
+## control messages. The server can be extended to handle incoming streams as
+## needed.
+
 import std/[posix, times, strutils, tables]
 import pkg/libevent/bindings/[event, bufferevent, buffer]
 
@@ -17,47 +24,82 @@ const
 # RTMP state / types
 const
   HS_INIT* = 0
+    ## Initial state before handshake starts
   HS_S0S1_SENT* = 1
+    ## Handshake state after sending S0 and S1, waiting for S0S1S2 from client
   HS_DONE* = 2
+    ## Handshake complete, ready for RTMP messages
 
   RTMP_DEFAULT_CHUNK_SIZE* = 128
+    ## Default RTMP chunk size before any SetChunkSize messages are processed
   RTMP_MAX_CHUNK_SIZE* = 65536
+    ## Maximum RTMP chunk size supported by this implementation (for sanity checking)
 
 type
   ServerCtx* = ref object
+    ## Server context holding global state, such as the libevent base and listening socket
     base*: ptr event_base
+      ## Libevent base for managing events
     listenFd*: cint
+      ## File descriptor for the listening socket
 
   RtmpConnState* = object
+    ## Per-connection RTMP state, including chunk sizes, acknowledgment tracking, and stream state
     peerChunkSize*: int
+      ## Chunk size specified by the peer (client), used
+      ## for parsing incoming messages
     localChunkSize*: int
+      ## Chunk size we use for sending messages to the peer;
+      ## can be adjusted with SetChunkSize
     windowAckSize*: uint32
+      ## Acknowledgment window size specified by the peer;
+      ## we track how many bytes we've received since the last ACK
     bytesReceivedSinceAck*: uint64
+      ## Counter for bytes received since last acknowledgment sent to peer
     streams*: Table[int, pointer] # placeholder
+      ## Table of active streams by stream ID; can be used
+      ## to track per-stream state if needed
 
   ConnCtx* = ref object
     bev*: ptr bufferevent
+      ## Libevent buffer event for this connection, used for reading/writing data
     state*: RtmpConnState
+      ## Per-connection RTMP protocol state (chunk sizes, ack window, stream table, etc)
     inbuf*: ptr Evbuffer
+      ## Input buffer for reading incoming data from the client
     outbuf*: ptr Evbuffer
+      ## Output buffer for writing outgoing data to the client
     hsState*: int
+      ## Handshake state: HS_INIT, HS_S0S1_SENT, or HS_DONE
     partialHdr*: seq[byte]
+      ## Buffer for accumulating partial RTMP chunk headers across reads
     partialMsg*: seq[byte]
+      ## Buffer for accumulating partial RTMP chunk payloads across reads
     expectedMsgLen*: int
+      ## Expected length of the current RTMP message being assembled
     msgTypeId*: int
+      ## RTMP message type ID of the current message being parsed
     msgStreamId*: int
+      ## RTMP message stream ID of the current message being parsed
     chunkCtx*: ChunkStreamCtx
+      ## Per-connection chunk stream context for parsing RTMP chunks
     serverS1*: seq[byte]
+      ## Server's S1 handshake data (used to validate C2 from client)
     nextStreamId*: int
+      ## Next available stream ID to assign for createStream requests
     connId*: int
+      ## Unique connection ID for debugging and tracking
     closed*: bool
+      ## True if this connection has been closed and cleaned up
     closeReason*: string
+      ## Reason for connection closure (e.g., "EOF", "ERROR", "cleanup")
     # publish/subscription bookkeeping
     publishedStreamName*: string
+      ## Name of the stream this connection is publishing (if any)
     publishedStreamId*: int
+      ## Stream ID assigned to the published stream (if any)
     subscriptions*: Table[string, int]
-  
-  RTMPServerError* = object of CatchableError
+      ## Map of stream name to stream ID for all streams this connection is subscribed to
 
 proc sendAmfCommand(conn: ConnCtx; msgStreamId: int; vals: seq[AMF0Value])
 proc sendRtmpMessage(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int; payload: seq[byte]; timestamp: int = 0): bool

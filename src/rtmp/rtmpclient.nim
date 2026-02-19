@@ -4,6 +4,14 @@
 #          Made by Humans from OpenPeeps
 #          https://github.com/openpeeps/rtmp
 
+## This module implements a RTMP client for publishing live streams to an RTMP server,
+## and a RTMP server for receiving and processing incoming RTMP connections.
+## 
+## It uses libevent for asynchronous network I/O and supports basic RTMP commands,
+## control messages, and zero-copy file streaming. The client can be used to
+## publish live video/audio streams from FLV files, while the server can be
+## extended to handle incoming streams as needed.
+
 import std/[net, os, sequtils, tables,
         random, times, posix, strutils, uri]
 
@@ -14,16 +22,21 @@ export rtmpplaylist
 export event_base_dispatch, event_base_free, bufferevent_free
 
 type
-  RtmpHandshakeState = enum
+  RtmpHandshakeState* = enum
+    ## Handshake states for client state machine
     hsSendC0C1, hsRecvS0S1S2, hsSendC2, hsDone
 
-  ConnStage = enum
+  ConnStage* = enum
+    ## Connection stages for client state machine
     stInit, stHandshakeDone, stConnectSent, stConnectOk,
     stCreateStreamSent, stStreamIdOk, stPublishSent, stPublishing
 
   StreamFileCallback* = proc(client: RtmpClient, st: StreamState, bytesSent: int)
+    ## Callback for streaming events, called with current stream state and bytes sent in this callback (for pacing)
   StreamAudioCallback* = proc(client: RtmpClient, aac: AacStreamState)
+    ## Callback for AAC streaming events, called with current AAC stream state (for pacing)
   StreamErrorCallback* = proc(client: RtmpClient, st: StreamState, errMsg: cstring)
+    ## Callback for streaming errors, called with current stream state and error message
 
   StreamState* = ref object
     ## Streaming state for zero-copy file streaming
@@ -48,10 +61,15 @@ type
     tsOffset*: uint32
       ## Timestamp offset for synchronization
     tagInProgress*: bool
+      ## Whether we're in the middle of sending a tag (for pacing)
     tagRemaining*: int
+      ## Remaining bytes in the current tag being sent
     tagPayloadPos*: int64
+      ## File position of the current tag payload being sent
     tagTsAbs*: uint32
+      ## Absolute timestamp of the current tag being sent (ts + tsOffset)
     tagSentAny*: bool
+      ## Whether we've sent any bytes of the current tag (for pacing)
 
   AacStreamState* = ref object
     ## AAC streaming state for audio streaming
@@ -903,7 +921,7 @@ proc tuneSocket(client: RtmpClient) =
     discard posix.setsockopt(fd.SocketHandle, SOL_SOCKET, SO_RCVBUF, cast[pointer](addr rcv), sizeof(cint).cuint)
 
 proc onEvent*(bev: ptr bufferevent, what: cshort, ctx: pointer) {.cdecl.} =
-  # Libevent event callback
+  ## Libevent event callback for connection events
   let client = cast[RtmpClient](ctx)
   if (what and BEV_EVENT_CONNECTED.cshort) != 0:
     ## debugEcho "[rtmp] Connected to ", client.host, ":", client.port
@@ -930,14 +948,14 @@ proc onEvent*(bev: ptr bufferevent, what: cshort, ctx: pointer) {.cdecl.} =
 #
 type
   FlvTagHeader = object
-    tagType: uint8
-      # 8=audio, 9=video, 18=script/data
-    dataSize: int
-      # size of tag payload
-    timestamp: uint32
-      # timestamp of tag
-    posPayload: int64
-      # file position of tag payload
+    tagType*: uint8
+      ## 8=audio, 9=video, 18=script/data
+    dataSize*: int
+      ## size of tag payload
+    timestamp*: uint32
+      ## timestamp of tag
+    posPayload*: int64
+      ## file position of tag payload
 
 proc readFlvHeader(fd: cint): int64 =
   # Read FLV header and return position of first tag, or -1 on error
@@ -1086,7 +1104,8 @@ proc startStreamFlvZeroCopy*(client: RtmpClient, filePath: string,
   scheduleSend(client, 0)
 
 proc newRtmpClient*(address: string): RtmpClient =
-  # Create new RTMP client and initiate connection to address
+  ## Create new RTMP client and initiate connection to address.
+  ## Address should be in form "rtmp://host[:port]/app/streamKey". Port is optional (default 1935 for rtmp, 443 for rtmps).
   let base = event_base_new()
   let bev = bufferevent_socket_new(base, -1, BEV_OPT_CLOSE_ON_FREE)
   let uri = parseUri(address)
@@ -1231,7 +1250,7 @@ proc sendTimerCb(fd: cint, what: cshort, arg: pointer) {.cdecl.} =
           ## debugEcho "[rtmp] Pacer stopped"
 
 proc startPacer*(client: RtmpClient, initCb: proc(c: RtmpClient) = nil) =
-  # call once when publishing/starting playback to initialize the clock and timer
+  ## Start pacing loop if not already active, and call initCb for any one-time initialization (e.g. start first stream).
   if client.sendTimer == nil:
     client.wallOriginMs = nowMs() - int64(client.ps.globalTs) # map current globalTs to now
     client.lastSendMs = nowMs()
