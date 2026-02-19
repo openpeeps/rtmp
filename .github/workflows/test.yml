@@ -26,18 +26,30 @@ jobs:
           nim-version: ${{ matrix.nim-version }}
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       
-      # first, install libevent
-      - run: sudo apt-get update && sudo apt-get install -y libevent-dev vlc
+      - name: Install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libssl-dev libevent-dev ca-certificates
+          # ensure linker cache sees /usr/local/lib if builds install there
+          sudo ldconfig
 
-        # then, instal https://github.com/ossrs/srs
-        # SRS is a dependency of our RTMP server implementation, and we need to build it from source to get the static libraries
-        # we'll use both our own RTMP server and the SRS libraries in our tests, so we need to build SRS as part of our CI setup
-      - run: |
-          git clone -b develop https://github.com/ossrs/srs.git
+      - name: Build SRS (shallow single-branch clone)
+        run: |
+          git clone --depth 1 --branch develop --single-branch https://github.com/ossrs/srs.git
           cd srs/trunk
           ./configure
-          make
-          ./etc/init.d/srs start
+          make -j$(nproc)
+          # if SRS installs libs into /usr/local, refresh ld cache
+          if [ -f /usr/local/lib/libssl.so ] || [ -f /usr/local/lib/libsrs.a ]; then
+            sudo ldconfig
+          fi
+
+      - name: Debug: verify libs visible
+        run: |
+          pkg-config --cflags --libs openssl libevent || true
+          ldconfig -p | grep -E "libssl|libcrypto|libevent" || true
+          ls -l /usr/lib/*/libssl* /usr/local/lib/libssl* || true
 
       - run: nimble install -Y
       - run: nim c -r src/${{ github.event.repository.name }}.nim
