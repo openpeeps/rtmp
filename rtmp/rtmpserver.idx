@@ -1,0 +1,15 @@
+nimTitle	rtmpserver	rtmp/rtmpserver.html	module rtmp/rtmpserver		0
+nim	DEFAULT_RTMP_PORT	rtmp/rtmpserver.html#DEFAULT_RTMP_PORT	const DEFAULT_RTMP_PORT		14
+nim	RTMP_HANDSHAKE_SIZE	rtmp/rtmpserver.html#RTMP_HANDSHAKE_SIZE	const RTMP_HANDSHAKE_SIZE		15
+nim	HS_INIT	rtmp/rtmpserver.html#HS_INIT	const HS_INIT		19
+nim	HS_S0S1_SENT	rtmp/rtmpserver.html#HS_S0S1_SENT	const HS_S0S1_SENT		20
+nim	HS_DONE	rtmp/rtmpserver.html#HS_DONE	const HS_DONE		21
+nim	RTMP_DEFAULT_CHUNK_SIZE	rtmp/rtmpserver.html#RTMP_DEFAULT_CHUNK_SIZE	const RTMP_DEFAULT_CHUNK_SIZE		23
+nim	RTMP_MAX_CHUNK_SIZE	rtmp/rtmpserver.html#RTMP_MAX_CHUNK_SIZE	const RTMP_MAX_CHUNK_SIZE		24
+nim	ServerCtx	rtmp/rtmpserver.html#ServerCtx	type ServerCtx		27
+nim	RtmpConnState	rtmp/rtmpserver.html#RtmpConnState	object RtmpConnState		31
+nim	ConnCtx	rtmp/rtmpserver.html#ConnCtx	type ConnCtx		38
+nim	RTMPServerError	rtmp/rtmpserver.html#RTMPServerError	object RTMPServerError		60
+nim	SubscriberEntry	rtmp/rtmpserver.html#SubscriberEntry	object SubscriberEntry		90
+nim	StreamEntry	rtmp/rtmpserver.html#StreamEntry	type StreamEntry		94
+nim	startServer	rtmp/rtmpserver.html#startServer,int	proc startServer(port: int = DEFAULT_RTMP_PORT)		785

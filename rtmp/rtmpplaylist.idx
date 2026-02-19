@@ -1,0 +1,5 @@
+nimTitle	rtmpplaylist	rtmp/rtmpplaylist.html	module rtmp/rtmpplaylist		0
+nim	PlaylistState	rtmp/rtmpplaylist.html#PlaylistState	type PlaylistState		4
+nim	loadPlaylist	rtmp/rtmpplaylist.html#loadPlaylist,string	proc loadPlaylist(filePath: string): seq[string]		21
+nim	nextVideo	rtmp/rtmpplaylist.html#nextVideo,PlaylistState	proc nextVideo(ps: PlaylistState): string		28
+nim	nextAudio	rtmp/rtmpplaylist.html#nextAudio,PlaylistState	proc nextAudio(ps: PlaylistState): string		35

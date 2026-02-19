@@ -1,0 +1,9 @@
+nimTitle	chunkstream	rtmp/server/chunkstream.html	module rtmp/server/chunkstream		0
+nim	ChunkMessageCb	rtmp/server/chunkstream.html#ChunkMessageCb	type ChunkMessageCb		10
+nim	ChunkHeader	rtmp/server/chunkstream.html#ChunkHeader	object ChunkHeader		13
+nim	ChunkStreamState	rtmp/server/chunkstream.html#ChunkStreamState	type ChunkStreamState		20
+nim	ChunkStreamCtx	rtmp/server/chunkstream.html#ChunkStreamCtx	type ChunkStreamCtx		30
+nim	initChunkStreamCtx	rtmp/server/chunkstream.html#initChunkStreamCtx,int	proc initChunkStreamCtx(peerChunkSize: int = 128): ChunkStreamCtx		47
+nim	setPeerChunkSize	rtmp/server/chunkstream.html#setPeerChunkSize,ChunkStreamCtx,int	proc setPeerChunkSize(ctx: ChunkStreamCtx; size: int)		58
+nim	setOnMessage	rtmp/server/chunkstream.html#setOnMessage,ChunkStreamCtx,ChunkMessageCb,pointer	proc setOnMessage(ctx: ChunkStreamCtx; cb: ChunkMessageCb; arg: pointer)		62
+nim	feedBytes	rtmp/server/chunkstream.html#feedBytes,ChunkStreamCtx,ptr.byte,int	proc feedBytes(ctx: ChunkStreamCtx; data: ptr byte; len: int): int		115
