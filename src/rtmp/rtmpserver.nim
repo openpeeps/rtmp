@@ -60,6 +60,8 @@ type
       ## Table of active streams by stream ID; can be used
       ## to track per-stream state if needed
 
+  RTMPServerError* = object of CatchableError
+
   ConnCtx* = ref object
     bev*: ptr bufferevent
       ## Libevent buffer event for this connection, used for reading/writing data
@@ -93,7 +95,6 @@ type
       ## True if this connection has been closed and cleaned up
     closeReason*: string
       ## Reason for connection closure (e.g., "EOF", "ERROR", "cleanup")
-    # publish/subscription bookkeeping
     publishedStreamName*: string
       ## Name of the stream this connection is publishing (if any)
     publishedStreamId*: int
