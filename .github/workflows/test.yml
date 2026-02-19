@@ -31,7 +31,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             pkg-config libssl-dev libevent-dev ca-certificates
-          # ensure linker cache sees /usr/local/lib if builds install there
           sudo ldconfig
 
       - name: Build SRS (shallow single-branch clone)
@@ -40,7 +39,6 @@ jobs:
           cd srs/trunk
           ./configure
           make -j$(nproc)
-          # if SRS installs libs into /usr/local, refresh ld cache
           if [ -f /usr/local/lib/libssl.so ] || [ -f /usr/local/lib/libsrs.a ]; then
             sudo ldconfig
           fi
