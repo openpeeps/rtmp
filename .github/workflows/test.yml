@@ -43,7 +43,7 @@ jobs:
             sudo ldconfig
           fi
 
-      - name: Debug: verify libs visible
+      - name: Debug - verify libs visible
         run: |
           pkg-config --cflags --libs openssl libevent || true
           ldconfig -p | grep -E "libssl|libcrypto|libevent" || true
