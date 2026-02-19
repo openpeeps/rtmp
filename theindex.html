@@ -104,6 +104,10 @@
 <li><a class="reference external"
           data-doc-search-tag="rtmpserver: type ConnCtx" href="rtmp/rtmpserver.html#ConnCtx">rtmpserver: type ConnCtx</a></li>
           </ul></dd>
+<dt><a name="ConnStage" href="#ConnStage"><span>ConnStage:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: enum ConnStage" href="rtmp/rtmpclient.html#ConnStage">rtmpclient: enum ConnStage</a></li>
+          </ul></dd>
 <dt><a name="decodeAllAMF0" href="#decodeAllAMF0"><span>decodeAllAMF0:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="actionmessage: proc decodeAllAMF0(data: seq[byte]): seq[AMF0Value]" href="rtmp/server/actionmessage.html#decodeAllAMF0%2Cseq%5Bbyte%5D">actionmessage: proc decodeAllAMF0(data: seq[byte]): seq[AMF0Value]</a></li>
@@ -138,6 +142,10 @@
 <li><a class="reference external"
           data-doc-search-tag="chunkstream: proc feedBytes(ctx: ChunkStreamCtx; data: ptr byte; len: int): int" href="rtmp/server/chunkstream.html#feedBytes%2CChunkStreamCtx%2Cptr.byte%2Cint">chunkstream: proc feedBytes(ctx: ChunkStreamCtx; data: ptr byte; len: int): int</a></li>
           </ul></dd>
+<dt><a name="hsDone" href="#hsDone"><span>hsDone:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: RtmpHandshakeState.hsDone" href="rtmp/rtmpclient.html#hsDone">rtmpclient: RtmpHandshakeState.hsDone</a></li>
+          </ul></dd>
 <dt><a name="HS_DONE" href="#HS_DONE"><span>HS_DONE:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpserver: const HS_DONE" href="rtmp/rtmpserver.html#HS_DONE">rtmpserver: const HS_DONE</a></li>
@@ -146,9 +154,21 @@
 <li><a class="reference external"
           data-doc-search-tag="rtmpserver: const HS_INIT" href="rtmp/rtmpserver.html#HS_INIT">rtmpserver: const HS_INIT</a></li>
           </ul></dd>
+<dt><a name="hsRecvS0S1S2" href="#hsRecvS0S1S2"><span>hsRecvS0S1S2:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: RtmpHandshakeState.hsRecvS0S1S2" href="rtmp/rtmpclient.html#hsRecvS0S1S2">rtmpclient: RtmpHandshakeState.hsRecvS0S1S2</a></li>
+          </ul></dd>
 <dt><a name="HS_S0S1_SENT" href="#HS_S0S1_SENT"><span>HS_S0S1_SENT:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpserver: const HS_S0S1_SENT" href="rtmp/rtmpserver.html#HS_S0S1_SENT">rtmpserver: const HS_S0S1_SENT</a></li>
+          </ul></dd>
+<dt><a name="hsSendC0C1" href="#hsSendC0C1"><span>hsSendC0C1:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: RtmpHandshakeState.hsSendC0C1" href="rtmp/rtmpclient.html#hsSendC0C1">rtmpclient: RtmpHandshakeState.hsSendC0C1</a></li>
+          </ul></dd>
+<dt><a name="hsSendC2" href="#hsSendC2"><span>hsSendC2:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: RtmpHandshakeState.hsSendC2" href="rtmp/rtmpclient.html#hsSendC2">rtmpclient: RtmpHandshakeState.hsSendC2</a></li>
           </ul></dd>
 <dt><a name="initChunkStreamCtx" href="#initChunkStreamCtx"><span>initChunkStreamCtx:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -226,6 +246,10 @@
 <li><a class="reference external"
           data-doc-search-tag="rtmpserver: const RTMP_HANDSHAKE_SIZE" href="rtmp/rtmpserver.html#RTMP_HANDSHAKE_SIZE">rtmpserver: const RTMP_HANDSHAKE_SIZE</a></li>
           </ul></dd>
+<dt><a name="RtmpHandshakeState" href="#RtmpHandshakeState"><span>RtmpHandshakeState:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: enum RtmpHandshakeState" href="rtmp/rtmpclient.html#RtmpHandshakeState">rtmpclient: enum RtmpHandshakeState</a></li>
+          </ul></dd>
 <dt><a name="RTMP_MAX_CHUNK_SIZE" href="#RTMP_MAX_CHUNK_SIZE"><span>RTMP_MAX_CHUNK_SIZE:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpserver: const RTMP_MAX_CHUNK_SIZE" href="rtmp/rtmpserver.html#RTMP_MAX_CHUNK_SIZE">rtmpserver: const RTMP_MAX_CHUNK_SIZE</a></li>
@@ -270,6 +294,34 @@
                        msgStreamId: uint32; lowWater: int = 256 * 1024;
                        startTs: uint32 = 0'u32)</a></li>
           </ul></dd>
+<dt><a name="stConnectOk" href="#stConnectOk"><span>stConnectOk:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: ConnStage.stConnectOk" href="rtmp/rtmpclient.html#stConnectOk">rtmpclient: ConnStage.stConnectOk</a></li>
+          </ul></dd>
+<dt><a name="stConnectSent" href="#stConnectSent"><span>stConnectSent:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: ConnStage.stConnectSent" href="rtmp/rtmpclient.html#stConnectSent">rtmpclient: ConnStage.stConnectSent</a></li>
+          </ul></dd>
+<dt><a name="stCreateStreamSent" href="#stCreateStreamSent"><span>stCreateStreamSent:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: ConnStage.stCreateStreamSent" href="rtmp/rtmpclient.html#stCreateStreamSent">rtmpclient: ConnStage.stCreateStreamSent</a></li>
+          </ul></dd>
+<dt><a name="stHandshakeDone" href="#stHandshakeDone"><span>stHandshakeDone:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: ConnStage.stHandshakeDone" href="rtmp/rtmpclient.html#stHandshakeDone">rtmpclient: ConnStage.stHandshakeDone</a></li>
+          </ul></dd>
+<dt><a name="stInit" href="#stInit"><span>stInit:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: ConnStage.stInit" href="rtmp/rtmpclient.html#stInit">rtmpclient: ConnStage.stInit</a></li>
+          </ul></dd>
+<dt><a name="stPublishing" href="#stPublishing"><span>stPublishing:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: ConnStage.stPublishing" href="rtmp/rtmpclient.html#stPublishing">rtmpclient: ConnStage.stPublishing</a></li>
+          </ul></dd>
+<dt><a name="stPublishSent" href="#stPublishSent"><span>stPublishSent:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: ConnStage.stPublishSent" href="rtmp/rtmpclient.html#stPublishSent">rtmpclient: ConnStage.stPublishSent</a></li>
+          </ul></dd>
 <dt><a name="StreamAudioCallback" href="#StreamAudioCallback"><span>StreamAudioCallback:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpclient: type StreamAudioCallback" href="rtmp/rtmpclient.html#StreamAudioCallback">rtmpclient: type StreamAudioCallback</a></li>
@@ -290,6 +342,10 @@
 <li><a class="reference external"
           data-doc-search-tag="rtmpclient: type StreamState" href="rtmp/rtmpclient.html#StreamState">rtmpclient: type StreamState</a></li>
           </ul></dd>
+<dt><a name="stStreamIdOk" href="#stStreamIdOk"><span>stStreamIdOk:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: ConnStage.stStreamIdOk" href="rtmp/rtmpclient.html#stStreamIdOk">rtmpclient: ConnStage.stStreamIdOk</a></li>
+          </ul></dd>
 <dt><a name="SubscriberEntry" href="#SubscriberEntry"><span>SubscriberEntry:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpserver: object SubscriberEntry" href="rtmp/rtmpserver.html#SubscriberEntry">rtmpserver: object SubscriberEntry</a></li>
@@ -298,7 +354,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-19 20:00:01 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-19 20:16:23 UTC</small>
       </div>
     </div>
   </div>

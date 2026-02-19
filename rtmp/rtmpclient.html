@@ -72,6 +72,9 @@
   tsRem*: int                ## Remaining timestamp for pacing
   preRollFrames*: int        ## Pre-roll frames for AAC">AacStreamState</a></li>
 <li><a class="reference" href="#ChunkStreamState" title="ChunkStreamState = object">ChunkStreamState</a></li>
+<li><a class="reference" href="#ConnStage" title="ConnStage = enum
+  stInit, stHandshakeDone, stConnectSent, stConnectOk, stCreateStreamSent,
+  stStreamIdOk, stPublishSent, stPublishing">ConnStage</a></li>
 <li><a class="reference" href="#RtmpClient" title="RtmpClient = ref object
   base*: ptr event_base
   bev*: ptr bufferevent
@@ -92,6 +95,8 @@
   inBytes*: uint64           ## Total bytes received
   lastAcked*: uint64         ## Last acknowledged byte count
   outChunkSize*: int = 2048  ## Outbound chunk size">RtmpClient</a></li>
+<li><a class="reference" href="#RtmpHandshakeState" title="RtmpHandshakeState = enum
+  hsSendC0C1, hsRecvS0S1S2, hsSendC2, hsDone">RtmpHandshakeState</a></li>
 <li><a class="reference" href="#StreamAudioCallback" title="StreamAudioCallback = proc (client: RtmpClient; aac: AacStreamState)">StreamAudioCallback</a></li>
 <li><a class="reference" href="#StreamErrorCallback" title="StreamErrorCallback = proc (client: RtmpClient; st: StreamState; errMsg: cstring)">StreamErrorCallback</a></li>
 <li><a class="reference" href="#StreamFileCallback" title="StreamFileCallback = proc (client: RtmpClient; st: StreamState; bytesSent: int)">StreamFileCallback</a></li>
@@ -106,11 +111,11 @@
   lowWater*: int             ## Low water mark for backpressure
   done*: bool                ## Whether streaming is done
   tsOffset*: uint32          ## Timestamp offset for synchronization
-  tagInProgress*: bool
-  tagRemaining*: int
-  tagPayloadPos*: int64
-  tagTsAbs*: uint32
-  tagSentAny*: bool">StreamState</a></li>
+  tagInProgress*: bool       ## Whether we're in the middle of sending a tag (for pacing)
+  tagRemaining*: int         ## Remaining bytes in the current tag being sent
+  tagPayloadPos*: int64      ## File position of the current tag payload being sent
+  tagTsAbs*: uint32          ## Absolute timestamp of the current tag being sent (ts + tsOffset)
+  tagSentAny*: bool          ## Whether we've sent any bytes of the current tag (for pacing)">StreamState</a></li>
 
     </ul>
   </details>
@@ -162,7 +167,9 @@
     
     <div id="tocRoot"></div>
     
-    <p class="module-desc"></p>
+    <p class="module-desc"><p>This module implements a RTMP client for publishing live streams to an RTMP server, and a RTMP server for receiving and processing incoming RTMP connections.</p>
+<p>It uses libevent for asynchronous network I/O and supports basic RTMP commands, control messages, and zero-copy file streaming. The client can be used to publish live video/audio streams from FLV files, while the server can be extended to handle incoming streams as needed.</p>
+</p>
     <div class="section" id="6">
   <h1><a class="toc-backref" href="#6">Imports</a></h1>
   <dl class="item">
@@ -200,6 +207,16 @@
     
   </dd>
 </div>
+<div id="ConnStage">
+  <dt><pre><a href="rtmpclient.html#ConnStage"><span class="Identifier">ConnStage</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
+  <span class="Identifier">stInit</span><span class="Other">,</span> <span class="Identifier">stHandshakeDone</span><span class="Other">,</span> <span class="Identifier">stConnectSent</span><span class="Other">,</span> <span class="Identifier">stConnectOk</span><span class="Other">,</span> <span class="Identifier">stCreateStreamSent</span><span class="Other">,</span>
+  <span class="Identifier">stStreamIdOk</span><span class="Other">,</span> <span class="Identifier">stPublishSent</span><span class="Other">,</span> <span class="Identifier">stPublishing</span></pre></dt>
+  <dd>
+    
+    Connection stages for client state machine
+    
+  </dd>
+</div>
 <div id="RtmpClient">
   <dt><pre><a href="rtmpclient.html#RtmpClient"><span class="Identifier">RtmpClient</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">base</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">event_base</span>
@@ -227,11 +244,20 @@
     
   </dd>
 </div>
+<div id="RtmpHandshakeState">
+  <dt><pre><a href="rtmpclient.html#RtmpHandshakeState"><span class="Identifier">RtmpHandshakeState</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
+  <span class="Identifier">hsSendC0C1</span><span class="Other">,</span> <span class="Identifier">hsRecvS0S1S2</span><span class="Other">,</span> <span class="Identifier">hsSendC2</span><span class="Other">,</span> <span class="Identifier">hsDone</span></pre></dt>
+  <dd>
+    
+    Handshake states for client state machine
+    
+  </dd>
+</div>
 <div id="StreamAudioCallback">
   <dt><pre><a href="rtmpclient.html#StreamAudioCallback"><span class="Identifier">StreamAudioCallback</span></a> <span class="Other">=</span> <span class="Keyword">proc</span> <span class="Other">(</span><span class="Identifier">client</span><span class="Other">:</span> <a href="rtmpclient.html#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">;</span> <span class="Identifier">aac</span><span class="Other">:</span> <a href="rtmpclient.html#AacStreamState"><span class="Identifier">AacStreamState</span></a><span class="Other">)</span></pre></dt>
   <dd>
     
-    
+    Callback for AAC streaming events, called with current AAC stream state (for pacing)
     
   </dd>
 </div>
@@ -239,7 +265,7 @@
   <dt><pre><a href="rtmpclient.html#StreamErrorCallback"><span class="Identifier">StreamErrorCallback</span></a> <span class="Other">=</span> <span class="Keyword">proc</span> <span class="Other">(</span><span class="Identifier">client</span><span class="Other">:</span> <a href="rtmpclient.html#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">;</span> <span class="Identifier">st</span><span class="Other">:</span> <a href="rtmpclient.html#StreamState"><span class="Identifier">StreamState</span></a><span class="Other">;</span> <span class="Identifier">errMsg</span><span class="Other">:</span> <span class="Identifier">cstring</span><span class="Other">)</span></pre></dt>
   <dd>
     
-    
+    Callback for streaming errors, called with current stream state and error message
     
   </dd>
 </div>
@@ -247,7 +273,7 @@
   <dt><pre><a href="rtmpclient.html#StreamFileCallback"><span class="Identifier">StreamFileCallback</span></a> <span class="Other">=</span> <span class="Keyword">proc</span> <span class="Other">(</span><span class="Identifier">client</span><span class="Other">:</span> <a href="rtmpclient.html#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">;</span> <span class="Identifier">st</span><span class="Other">:</span> <a href="rtmpclient.html#StreamState"><span class="Identifier">StreamState</span></a><span class="Other">;</span> <span class="Identifier">bytesSent</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span></pre></dt>
   <dd>
     
-    
+    Callback for streaming events, called with current stream state and bytes sent in this callback (for pacing)
     
   </dd>
 </div>
@@ -263,11 +289,11 @@
   <span class="Identifier">lowWater</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>             <span class="Comment">## Low water mark for backpressure</span>
   <span class="Identifier">done</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>                <span class="Comment">## Whether streaming is done</span>
   <span class="Identifier">tsOffset</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>          <span class="Comment">## Timestamp offset for synchronization</span>
-  <span class="Identifier">tagInProgress</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
-  <span class="Identifier">tagRemaining</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
-  <span class="Identifier">tagPayloadPos</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>
-  <span class="Identifier">tagTsAbs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>
-  <span class="Identifier">tagSentAny</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span></pre></dt>
+  <span class="Identifier">tagInProgress</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>       <span class="Comment">## Whether we're in the middle of sending a tag (for pacing)</span>
+  <span class="Identifier">tagRemaining</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>         <span class="Comment">## Remaining bytes in the current tag being sent</span>
+  <span class="Identifier">tagPayloadPos</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>      <span class="Comment">## File position of the current tag payload being sent</span>
+  <span class="Identifier">tagTsAbs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>          <span class="Comment">## Absolute timestamp of the current tag being sent (ts + tsOffset)</span>
+  <span class="Identifier">tagSentAny</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>          <span class="Comment">## Whether we've sent any bytes of the current tag (for pacing)</span></pre></dt>
   <dd>
     
     Streaming state for zero-copy file streaming
@@ -286,7 +312,7 @@
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    
+    Create new RTMP client and initiate connection to address. Address should be in form &quot;rtmp://host<a class="reference internal" href="#:port">:port</a>/app/streamKey&quot;. Port is optional (default 1935 for rtmp, 443 for rtmps).
     
   </dd>
 </div>
@@ -298,7 +324,7 @@
     <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">TimeEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    
+    Libevent event callback for connection events
     
   </dd>
 </div>
@@ -310,7 +336,7 @@
     <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    
+    Start pacing loop if not already active, and call initCb for any one-time initialization (e.g. start first stream).
     
   </dd>
 </div>
@@ -361,7 +387,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-19 20:00:01 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-19 20:16:23 UTC</small>
       </div>
     </div>
   </div>

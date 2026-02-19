@@ -1,13 +1,27 @@
 nimTitle	rtmpclient	rtmp/rtmpclient.html	module rtmp/rtmpclient		0
-nim	StreamFileCallback	rtmp/rtmpclient.html#StreamFileCallback	type StreamFileCallback		24
-nim	StreamAudioCallback	rtmp/rtmpclient.html#StreamAudioCallback	type StreamAudioCallback		25
-nim	StreamErrorCallback	rtmp/rtmpclient.html#StreamErrorCallback	type StreamErrorCallback		26
-nim	StreamState	rtmp/rtmpclient.html#StreamState	type StreamState		28
-nim	AacStreamState	rtmp/rtmpclient.html#AacStreamState	type AacStreamState		56
-nim	ChunkStreamState	rtmp/rtmpclient.html#ChunkStreamState	object ChunkStreamState		91
-nim	RtmpClient	rtmp/rtmpclient.html#RtmpClient	type RtmpClient		99
-nim	startStreamAacAdtsZeroCopy	rtmp/rtmpclient.html#startStreamAacAdtsZeroCopy,RtmpClient,string,uint32,uint8,int,uint32	proc startStreamAacAdtsZeroCopy(client: RtmpClient; filePath: string;\n                           msgStreamId: uint32; csid: uint8 = 4'u8;\n                           lowWater: int = 256 * 1024; startTs: uint32 = 0'u32)		871
-nim	onEvent	rtmp/rtmpclient.html#onEvent,ptr.bufferevent,cshort,pointer	proc onEvent(bev: ptr bufferevent; what: cshort; ctx: pointer)		905
-nim	startStreamFlvZeroCopy	rtmp/rtmpclient.html#startStreamFlvZeroCopy,RtmpClient,string,uint32,int,uint32	proc startStreamFlvZeroCopy(client: RtmpClient; filePath: string;\n                       msgStreamId: uint32; lowWater: int = 256 * 1024;\n                       startTs: uint32 = 0'u32)		1059
-nim	newRtmpClient	rtmp/rtmpclient.html#newRtmpClient,string	proc newRtmpClient(address: string): RtmpClient		1088
-nim	startPacer	rtmp/rtmpclient.html#startPacer,RtmpClient,proc(RtmpClient)	proc startPacer(client: RtmpClient; initCb: proc (c: RtmpClient) = nil)		1233
+nim	hsSendC0C1	rtmp/rtmpclient.html#hsSendC0C1	RtmpHandshakeState.hsSendC0C1		25
+nim	hsRecvS0S1S2	rtmp/rtmpclient.html#hsRecvS0S1S2	RtmpHandshakeState.hsRecvS0S1S2		25
+nim	hsSendC2	rtmp/rtmpclient.html#hsSendC2	RtmpHandshakeState.hsSendC2		25
+nim	hsDone	rtmp/rtmpclient.html#hsDone	RtmpHandshakeState.hsDone		25
+nim	RtmpHandshakeState	rtmp/rtmpclient.html#RtmpHandshakeState	enum RtmpHandshakeState		25
+nim	stInit	rtmp/rtmpclient.html#stInit	ConnStage.stInit		29
+nim	stHandshakeDone	rtmp/rtmpclient.html#stHandshakeDone	ConnStage.stHandshakeDone		29
+nim	stConnectSent	rtmp/rtmpclient.html#stConnectSent	ConnStage.stConnectSent		29
+nim	stConnectOk	rtmp/rtmpclient.html#stConnectOk	ConnStage.stConnectOk		29
+nim	stCreateStreamSent	rtmp/rtmpclient.html#stCreateStreamSent	ConnStage.stCreateStreamSent		29
+nim	stStreamIdOk	rtmp/rtmpclient.html#stStreamIdOk	ConnStage.stStreamIdOk		29
+nim	stPublishSent	rtmp/rtmpclient.html#stPublishSent	ConnStage.stPublishSent		29
+nim	stPublishing	rtmp/rtmpclient.html#stPublishing	ConnStage.stPublishing		29
+nim	ConnStage	rtmp/rtmpclient.html#ConnStage	enum ConnStage		29
+nim	StreamFileCallback	rtmp/rtmpclient.html#StreamFileCallback	type StreamFileCallback		34
+nim	StreamAudioCallback	rtmp/rtmpclient.html#StreamAudioCallback	type StreamAudioCallback		36
+nim	StreamErrorCallback	rtmp/rtmpclient.html#StreamErrorCallback	type StreamErrorCallback		38
+nim	StreamState	rtmp/rtmpclient.html#StreamState	type StreamState		41
+nim	AacStreamState	rtmp/rtmpclient.html#AacStreamState	type AacStreamState		74
+nim	ChunkStreamState	rtmp/rtmpclient.html#ChunkStreamState	object ChunkStreamState		109
+nim	RtmpClient	rtmp/rtmpclient.html#RtmpClient	type RtmpClient		117
+nim	startStreamAacAdtsZeroCopy	rtmp/rtmpclient.html#startStreamAacAdtsZeroCopy,RtmpClient,string,uint32,uint8,int,uint32	proc startStreamAacAdtsZeroCopy(client: RtmpClient; filePath: string;\n                           msgStreamId: uint32; csid: uint8 = 4'u8;\n                           lowWater: int = 256 * 1024; startTs: uint32 = 0'u32)		889
+nim	onEvent	rtmp/rtmpclient.html#onEvent,ptr.bufferevent,cshort,pointer	proc onEvent(bev: ptr bufferevent; what: cshort; ctx: pointer)		923
+nim	startStreamFlvZeroCopy	rtmp/rtmpclient.html#startStreamFlvZeroCopy,RtmpClient,string,uint32,int,uint32	proc startStreamFlvZeroCopy(client: RtmpClient; filePath: string;\n                       msgStreamId: uint32; lowWater: int = 256 * 1024;\n                       startTs: uint32 = 0'u32)		1077
+nim	newRtmpClient	rtmp/rtmpclient.html#newRtmpClient,string	proc newRtmpClient(address: string): RtmpClient		1106
+nim	startPacer	rtmp/rtmpclient.html#startPacer,RtmpClient,proc(RtmpClient)	proc startPacer(client: RtmpClient; initCb: proc (c: RtmpClient) = nil)		1252
