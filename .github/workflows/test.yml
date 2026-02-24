@@ -33,15 +33,16 @@ jobs:
             pkg-config libssl-dev libevent-dev ca-certificates
           sudo ldconfig
 
-      - name: Build SRS (shallow single-branch clone)
-        run: |
-          git clone --depth 1 --branch develop --single-branch https://github.com/ossrs/srs.git
-          cd srs/trunk
-          ./configure
-          make -j$(nproc)
-          if [ -f /usr/local/lib/libssl.so ] || [ -f /usr/local/lib/libsrs.a ]; then
-            sudo ldconfig
-          fi
+      # not needed
+      # - name: Build SRS (shallow single-branch clone)
+      #   run: |
+      #     git clone --depth 1 --branch develop --single-branch https://github.com/ossrs/srs.git
+      #     cd srs/trunk
+      #     ./configure
+      #     make -j$(nproc)
+      #     if [ -f /usr/local/lib/libssl.so ] || [ -f /usr/local/lib/libsrs.a ]; then
+      #       sudo ldconfig
+      #     fi
 
       - name: Debug - verify libs visible
         run: |
@@ -50,5 +51,5 @@ jobs:
           ls -l /usr/lib/*/libssl* /usr/local/lib/libssl* || true
 
       - run: nimble install -Y
-      - run: nim c -r src/${{ github.event.repository.name }}.nim
+      - run: nim c src/${{ github.event.repository.name }}.nim
       - run: nimble test
