@@ -11,5 +11,5 @@ nim	RtmpConnState	rtmp/rtmpserver.html#RtmpConnState	object RtmpConnState		46
 nim	RTMPServerError	rtmp/rtmpserver.html#RTMPServerError	object RTMPServerError		63
 nim	ConnCtx	rtmp/rtmpserver.html#ConnCtx	type ConnCtx		65
 nim	SubscriberEntry	rtmp/rtmpserver.html#SubscriberEntry	object SubscriberEntry		133
-nim	StreamEntry	rtmp/rtmpserver.html#StreamEntry	type StreamEntry		137
-nim	startServer	rtmp/rtmpserver.html#startServer,int	proc startServer(port: int = DEFAULT_RTMP_PORT)		828
+nim	StreamEntry	rtmp/rtmpserver.html#StreamEntry	type StreamEntry		142
+nim	startServer	rtmp/rtmpserver.html#startServer,int	proc startServer(port: int = DEFAULT_RTMP_PORT)		846
