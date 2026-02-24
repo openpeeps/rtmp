@@ -131,18 +131,36 @@ var gNextConnId = 1
 # Stream pub/sub registry
 type
   SubscriberEntry* = object
+    ## Represents a subscriber to a stream, holding the connection context
+    ## and assigned message stream ID for sending messages to this subscriber
     conn*: ConnCtx
+      ## Connection of the subscriber
     msgStreamId*: int
+      ## Stream ID assigned to this subscription for
+      ## sending messages to the subscriber
 
   StreamEntry* = ref object
+    ## Represents a published stream, holding the publisher connection,
+    ## assigned stream ID, list of subscribers, and cached metadata/sequence
+    ## headers for new subscribers
     name*: string
+      ## Name of the stream (e.g., "live/streamKey")
     publisher*: ConnCtx
+      ## Connection that is publishing this stream (if any)
     publisherStreamId*: int
+      ## Stream ID assigned to the publisher's stream for this stream name
     subscribers*: seq[SubscriberEntry]
+      ## List of subscribers to this stream
     # cached payloads to send to new subscribers
     metaPayload*: seq[byte]
+      ## Cached metadata payload (RTMP message type 18) to
+      ## send to new subscribers for stream initialization
     videoSeqPayload*: seq[byte]
+      ## Cached video sequence header payload (RTMP message type 9)
+      ## to send to new subscribers for stream initialization
     audioSeqPayload*: seq[byte]
+      ## Cached audio sequence header payload (RTMP message type 8)
+      ## to send to new subscribers for stream initialization
 
 var gStreams = initTable[string, StreamEntry]()
 
@@ -827,8 +845,8 @@ proc accept_cb(listenFd: cint, events: cshort, arg: pointer) {.cdecl.} =
 
 proc startServer*(port: int = DEFAULT_RTMP_PORT) =
   ## Start RTMP server on specified port (default 1935)
-  # todo find a better name for this proc; it's really "setupListenerAndEventLoop" or
-  # something, but startServer is more concise for now
+  ## This is a blocking call that runs the event loop; it will not return
+  ## until the server is stopped.
   var listenFd = socket(AF_INET, SOCK_STREAM, 0)
   if listenFd.int < 0:
     raise newException(RTMPServerError, "Failed to create socket")
@@ -853,6 +871,3 @@ proc startServer*(port: int = DEFAULT_RTMP_PORT) =
     raise newException(RTMPServerError, "Failed to create event")
   discard event_add(ev, nil)
   discard event_base_dispatch(base)
-
-when isMainModule:
-  startServer()
