@@ -11,15 +11,28 @@
 ## control messages. The server can be extended to handle incoming streams as
 ## needed.
 
-import std/[posix, times, strutils, tables]
-import pkg/libevent/bindings/[event, bufferevent, buffer]
+import std/[posix, times, strutils, tables, sequtils]
+import pkg/libevent/bindings/[event, bufferevent, buffer, http, listener]
 
 import ./server/actionmessage
 import ./server/chunkstream
+import ./server/rtmpmonitor
+
+from std/net import Port, `$`
 
 const
   DEFAULT_RTMP_PORT* = 1935
+    ## Default port for RTMP servers to listen on
   RTMP_HANDSHAKE_SIZE* = 1536
+    ## RTMP handshake S1/S2 size in bytes
+  MAX_SUBSCRIBER_OUTBUF* = 8 * 1024 * 1024
+    ## todo allow for configurable limits and better
+    ## backpressure handling
+  SLOW_SUBSCRIBER_RESUME_OUTBUF = MAX_SUBSCRIBER_OUTBUF div 2
+    ## When a subscriber is marked as slow due to exceeding the outbuf limit,
+    ## we can resume sending to them once their outbuf drops below this threshold
+  LIVE_JUMP_COOLDOWN_MS = 1500'i64
+    ## Prevent repeated jump-to-live in very short intervals
 
 # RTMP state / types
 const
@@ -35,13 +48,17 @@ const
   RTMP_MAX_CHUNK_SIZE* = 65536
     ## Maximum RTMP chunk size supported by this implementation (for sanity checking)
 
+proc epochMs(): int64 {.inline.} =
+  int64(times.epochTime() * 1000.0)
+
 type
-  ServerCtx* = ref object
-    ## Server context holding global state, such as the libevent base and listening socket
-    base*: ptr event_base
-      ## Libevent base for managing events
-    listenFd*: cint
-      ## File descriptor for the listening socket
+  SharedPayload = ref object
+    refs: int
+      # Reference count for this payload; used for
+      # zero-copy streaming to manage memory across connections
+    bytes: seq[byte]
+      # Shared payload data for zero-copy streaming.
+      # Reference counted to manage memory across connections
 
   RtmpConnState* = object
     ## Per-connection RTMP state, including chunk sizes, acknowledgment tracking, and stream state
@@ -59,6 +76,17 @@ type
     streams*: Table[int, pointer] # placeholder
       ## Table of active streams by stream ID; can be used
       ## to track per-stream state if needed
+  
+  RtmpServer* = ref object
+    ## Main RTMP server object holding the server context and any global state
+    base*: ptr event_base
+      ## Libevent base for managing events
+    listenFd*: cint
+      ## File descriptor for the listening socket
+    restApiListener*: ptr evconnlistener
+      ## Listener used by the REST API HTTP server
+    restApiHttp*: ptr evhttp
+      ## Libevent HTTP server handle for REST API
 
   RTMPServerError* = object of CatchableError
 
@@ -91,6 +119,8 @@ type
       ## Next available stream ID to assign for createStream requests
     connId*: int
       ## Unique connection ID for debugging and tracking
+    clientIp*: string
+      ## IP address of the connected client (for logging and monitoring)
     closed*: bool
       ## True if this connection has been closed and cleaned up
     closeReason*: string
@@ -101,10 +131,18 @@ type
       ## Stream ID assigned to the published stream (if any)
     subscriptions*: Table[string, int]
       ## Map of stream name to stream ID for all streams this connection is subscribed to
+    slowSubscriber*: bool
+      ## true when subscriber output queue exceeded MAX_SUBSCRIBER_OUTBUF
+    waitForKeyframe*: bool
+      ## when recovering from lag, drop media until next video keyframe
+    lastLiveJumpMs*: int64
+      ## Last time this subscriber was force-jumped to live
 
 proc sendAmfCommand(conn: ConnCtx; msgStreamId: int; vals: seq[AMF0Value])
 proc sendRtmpMessage(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int; payload: seq[byte]; timestamp: int = 0): bool
+proc sendRtmpMessageShared(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int; sp: SharedPayload; timestamp: int = 0): bool
 proc removeSubscriber(name: string, conn: ConnCtx)
+proc connSummary(conn: ConnCtx): string
 
 # Helpers
 proc setReuseAndNonblock(fd: cint) =
@@ -124,11 +162,75 @@ proc buildServerS1(): seq[byte] =
     s[i] = byte((ts + i) and 0xFF)
   s
 
-# Keep ConnCtx refs alive while C/libevent only holds a raw pointer.
-var gConnKeepAlive = initTable[pointer, ConnCtx]()
-var gNextConnId = 1
+var
+  gConnKeepAlive = initTable[pointer, ConnCtx]()
+  gSharedKeepAlive = initTable[pointer, SharedPayload]()
+  gPendingClientIp = initTable[pointer, string]()
+  gNextConnId = 1
 
+#
+# Shared payload management for zero-copy streaming
+#
+proc sharedRetain(sp: SharedPayload) =
+  if sp == nil: return
+  if sp.refs == 0:
+    gSharedKeepAlive[cast[pointer](sp)] = sp
+  inc sp.refs
+
+proc sharedRelease(sp: SharedPayload) =
+  if sp == nil: return
+  if sp.refs <= 0: return
+  dec sp.refs
+  if sp.refs == 0:
+    let k = cast[pointer](sp)
+    if gSharedKeepAlive.hasKey(k):
+      gSharedKeepAlive.del(k)
+
+proc evbufRefCleanup(data: pointer, datlen: csize_t, cleanupArg: pointer) {.cdecl.} =
+  if cleanupArg == nil: return
+  let sp = cast[SharedPayload](cleanupArg)
+  sharedRelease(sp)
+
+proc newSharedPayload(payloadPtr: pointer, payloadLen: int): SharedPayload =
+  result = SharedPayload(refs: 0, bytes: @[])
+  if payloadLen <= 0 or payloadPtr == nil:
+    return
+  result.bytes = newSeq[byte](payloadLen)
+  copyMem(addr result.bytes[0], payloadPtr, payloadLen)
+
+
+proc monitorAddStream*(name: string, pubConn: ConnCtx) =
+  ## Add a new stream to the monitor with the given name and publisher connection
+  var pub = RtmpPublisher(id: $pubConn.connId, ip: pubConn.clientIp)
+  let stream = RtmpStream(
+    id: name,
+    publisher: pub,
+    created_at: now()
+  )
+  gMonitor.streams[name] = stream
+
+proc monitorRemoveStream*(name: string) =
+  gMonitor.streams.del(name)
+
+proc monitorAddSubscriber*(streamName: string, subConn: ConnCtx) =
+  ## Add a subscriber to the monitor's stream entry for the given
+  ## stream name and subscriber connection
+  if gMonitor.streams.hasKey(streamName):
+    let sub = RtmpSubscriber(id: $subConn.connId, ip: subConn.clientIp)
+    gMonitor.streams[streamName].subscribers.add(sub)
+
+proc monitorRemoveSubscriber*(streamName: string, subConn: ConnCtx) =
+  if gMonitor.streams.hasKey(streamName):
+    var stream = gMonitor.streams[streamName]
+    var subPos: int = -1
+    for i, s in stream.subscribers:
+      if s.id == $subConn.connId:
+        subPos = i; break
+    if subPos >= 0: gMonitor.streams[streamName].subscribers.del(subPos)
+
+#
 # Stream pub/sub registry
+#
 type
   SubscriberEntry* = object
     ## Represents a subscriber to a stream, holding the connection context
@@ -162,6 +264,43 @@ type
       ## Cached audio sequence header payload (RTMP message type 8)
       ## to send to new subscribers for stream initialization
 
+
+let
+  kAmfNull = newNull()
+  kAmfNum0 = newNumber(0.0)
+  kAmfCmdOnStatus = newString("onStatus")
+  kAmfCmdResult = newString("_result")
+
+  kInfoConnectSuccess = amfObj({
+    "level": newString("status"),
+    "code": newString("NetConnection.Connect.Success"),
+    "description": newString("Connection succeeded."),
+    "objectEncoding": kAmfNum0
+  })
+
+  kPropsConnect = amfObj({
+    "fmsVer": newString("FMS/3,5,7,7009"),
+    "capabilities": newNumber(31.0)
+  })
+
+  kInfoPlayReset = amfObj({
+    "level": newString("status"),
+    "code": newString("NetStream.Play.Reset"),
+    "description": newString("Resetting play state.")
+  })
+
+  kInfoPlayStop = amfObj({
+    "level": newString("status"),
+    "code": newString("NetStream.Play.Stop"),
+    "description": newString("Stream ended")
+  })
+
+  kInfoStreamNotFound = amfObj({
+    "level": newString("error"),
+    "code": newString("NetStream.Play.StreamNotFound"),
+    "description": newString("Stream not found")
+  })
+
 var gStreams = initTable[string, StreamEntry]()
 
 proc addPublisher(name: string, conn: ConnCtx, pubStreamId: int) =
@@ -176,12 +315,10 @@ proc addPublisher(name: string, conn: ConnCtx, pubStreamId: int) =
   conn.publishedStreamName = name
   conn.publishedStreamId = pubStreamId
 
-  # echo "addPublisher: name=", name, " conn=", $(cast[int](addr(conn))), " pubStreamId=", pubStreamId
   if gStreams.hasKey(name):
     let tse = gStreams[name]
-    # echo "  gStreams entry: publisher=", $(cast[int](addr(tse.publisher))), " publisherStreamId=", tse.publisherStreamId, " subscribers=", tse.subscribers.len
-
-  # clear previous cached seq headers when a new publisher arrives
+  monitorAddStream(name, conn)
+  # clear prev cached seq headers when a new publisher arrives
   se.metaPayload.setLen(0)
   se.videoSeqPayload.setLen(0)
   se.audioSeqPayload.setLen(0)
@@ -195,25 +332,23 @@ proc addSubscriber(name: string, conn: ConnCtx, subStreamId: int) =
     # new stream entry created
   se.subscribers.add(SubscriberEntry(conn: conn, msgStreamId: subStreamId))
   conn.subscriptions[name] = subStreamId
-  # echo "addSubscriber: name=", name, " conn=", $(cast[int](addr(conn))), " subStreamId=", subStreamId, " totalSubs=", se.subscribers.len
-  # echo "  stream entry publisher=", $(cast[int](addr(se.publisher))), " publisherStreamId=", se.publisherStreamId
-
-  # send cached meta and sequence headers (if any) so the new subscriber can initialize decoders
+  # send cached meta and sequence headers (if any)
+  # so the new subscriber can initialize decoders
   if se.metaPayload.len > 0:
-    # echo "Sending cached metaPayload to new subscriber msgStreamId=", subStreamId, " len=", se.metaPayload.len
+    # if sending fails (for example, due to a slow subscriber), we should remove this
+    # subscriber to avoid keeping bad connections around
     if not sendRtmpMessage(conn, csid = 4, msgTypeId = 18, msgStreamId = subStreamId, payload = se.metaPayload):
       removeSubscriber(name, conn)
       return
   if se.videoSeqPayload.len > 0:
-    # echo "Sending cached videoSeqPayload to new subscriber msgStreamId=", subStreamId, " len=", se.videoSeqPayload.len
     if not sendRtmpMessage(conn, csid = 4, msgTypeId = 9, msgStreamId = subStreamId, payload = se.videoSeqPayload):
       removeSubscriber(name, conn)
       return
   if se.audioSeqPayload.len > 0:
-    # echo "Sending cached audioSeqPayload to new subscriber msgStreamId=", subStreamId, " len=", se.audioSeqPayload.len
     if not sendRtmpMessage(conn, csid = 4, msgTypeId = 8, msgStreamId = subStreamId, payload = se.audioSeqPayload):
       removeSubscriber(name, conn)
       return
+  monitorAddSubscriber(name, conn)
 
 proc removeSubscriber(name: string, conn: ConnCtx) =
   if name.len == 0 or conn == nil: return
@@ -224,21 +359,26 @@ proc removeSubscriber(name: string, conn: ConnCtx) =
     if s.conn != conn:
       o.add(s)
   se.subscribers = o
-  if conn.subscriptions.hasKey(name): conn.subscriptions.del(name)
+  
+  # also remove from conn's subscription table
+  if conn.subscriptions.hasKey(name):
+    conn.subscriptions.del(name)
+
+  # prune empty placeholder streams (no publisher + no subscribers)
+  if se.publisher == nil and se.subscribers.len == 0 and gStreams.hasKey(name):
+    gStreams.del(name)
+  monitorRemoveSubscriber(name, conn)
 
 proc removePublisher(name: string) =
+  # When a publisher disconnects, we remove the stream and notify all subscribers that the stream has ended
   if name.len == 0: return
   if gStreams.hasKey(name):
     let se = gStreams[name]
     # notify subscribers that stream ended
     for s in se.subscribers:
       if s.conn != nil:
-        let info = amfObj({
-          "level": newString("status"),
-          "code": newString("NetStream.Play.Stop"),
-          "description": newString("Stream ended")
-        })
-        sendAmfCommand(s.conn, s.msgStreamId, @[ newString("onStatus"), newNumber(0.0), newNull(), info ])
+        sendAmfCommand(s.conn, s.msgStreamId, @[ kAmfCmdOnStatus, kAmfNum0, kAmfNull, kInfoPlayStop ])
+    monitorRemoveStream(name)
     gStreams.del(name)
 
 proc cleanupConn(conn: ConnCtx) =
@@ -247,13 +387,17 @@ proc cleanupConn(conn: ConnCtx) =
   conn.closed = true
   if conn.closeReason.len == 0:
     conn.closeReason = "cleanup"
+
   if conn.publishedStreamName.len > 0:
     removePublisher(conn.publishedStreamName)
-    conn.publishedStreamName = ""
-  # remove conn from any subscriber lists
-  for name, sid in conn.subscriptions.pairs:
+
+  # IMPORTANT: do not mutate table while iterating it
+  var subNames: seq[string] = @[]
+  for name, _ in conn.subscriptions.pairs:
+    subNames.add(name)
+  for name in subNames:
     removeSubscriber(name, conn)
-  conn.subscriptions = initTable[string, int]()
+  conn.subscriptions.clear()
 
 proc removeSubscriptionsByStreamId(conn: ConnCtx; streamId: int) =
   if conn == nil: return
@@ -273,51 +417,45 @@ proc connSummary(conn: ConnCtx): string =
     " pubStreamId=" & $conn.publishedStreamId &
     " subs=" & $conn.subscriptions.len
 
-# Event callback: ensure ConnCtx is freed when connection closes/errors
 proc bev_event_cb(bev: ptr bufferevent, what: cshort, ctx: pointer) {.cdecl.} =
+  # Event callback: ensure ConnCtx is freed when connection
+  # closes/errors to prevent memory leaks; also log events
+  # for debugging
   let cbarg = ctx
-
-  echo "bev_event: conn=", $(cast[int](cbarg)), " what=", what,
-       " flags=",(if (what and BEV_EVENT_CONNECTED) != 0: " CONNECTED" else: ""),
-       (if (what and BEV_EVENT_EOF) != 0: " EOF" else: ""),
-       (if (what and BEV_EVENT_ERROR) != 0: " ERROR" else: ""),
-       (if (what and BEV_EVENT_TIMEOUT) != 0: " TIMEOUT" else: "")
+  # echo "bev_event: conn=", $(cast[int](cbarg)), " what=", what,
+  #      " flags=",(if (what and BEV_EVENT_CONNECTED) != 0: " CONNECTED" else: ""),
+  #      (if (what and BEV_EVENT_EOF) != 0: " EOF" else: ""),
+  #      (if (what and BEV_EVENT_ERROR) != 0: " ERROR" else: ""),
+  #      (if (what and BEV_EVENT_TIMEOUT) != 0: " TIMEOUT" else: "")
   if cbarg != nil and gConnKeepAlive.hasKey(cbarg):
     let conn = gConnKeepAlive[cbarg]
-    echo "  ", connSummary(conn), " hsState=", conn.hsState, " closed=", conn.closed
+    # echo "  ", connSummary(conn), " hsState=", conn.hsState, " closed=", conn.closed
 
-  if (what and BEV_EVENT_CONNECTED) != 0:
-    echo "Connection established"
+  # if (what and BEV_EVENT_CONNECTED) != 0:
+    # echo "Connection established"
 
-  if (what and BEV_EVENT_EOF) != 0:
-    echo "Connection closed (EOF)"
-    if cbarg != nil:
-      if gConnKeepAlive.hasKey(cbarg):
-        let conn = gConnKeepAlive[cbarg]
-        conn.closed = true
-        conn.closeReason = "EOF"
-        cleanupConn(conn)
-        conn.bev = nil
-        conn.inbuf = nil
-        conn.outbuf = nil
-        gConnKeepAlive.del(cbarg)
-    if bev != nil:
-      bufferevent_free(bev)
+  let
+    isEof = (what and BEV_EVENT_EOF) != 0
+    isErr = (what and BEV_EVENT_ERROR) != 0
+  if not (isEof or isErr): return
 
-  if (what and BEV_EVENT_ERROR) != 0:
-    echo "Connection error"
-    if cbarg != nil:
-      if gConnKeepAlive.hasKey(cbarg):
-        let conn = gConnKeepAlive[cbarg]
-        conn.closed = true
-        conn.closeReason = "ERROR"
-        cleanupConn(conn)
-        conn.bev = nil
-        conn.inbuf = nil
-        conn.outbuf = nil
-        gConnKeepAlive.del(cbarg)
-    if bev != nil:
-      bufferevent_free(bev)
+  if bev != nil:
+    let k = cast[pointer](bev)
+    if gPendingClientIp.hasKey(k):
+      gPendingClientIp.del(k)
+
+  if cbarg != nil and gConnKeepAlive.hasKey(cbarg):
+    let conn = gConnKeepAlive[cbarg]
+    cleanupConn(conn)
+    conn.closeReason = (if isErr: "ERROR" else: "EOF")
+    conn.bev = nil
+    conn.inbuf = nil
+    conn.outbuf = nil
+    gConnKeepAlive.del(cbarg)
+
+  # Free exactly once
+  if bev != nil:
+    bufferevent_free(bev)
 
 # 
 # RTMP output helpers (very small)
@@ -340,7 +478,69 @@ proc put4LE(outp: var seq[byte], v: int) =
   outp.add(byte((v shr 16) and 0xFF))
   outp.add(byte((v shr 24) and 0xFF))
 
+proc sendRtmpMessageShared(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int; sp: SharedPayload; timestamp: int = 0): bool =
+  if conn == nil or conn.bev == nil or sp == nil: return false
+  let payloadLen = sp.bytes.len
+  if csid <= 1 or csid >= 64:
+    raise newException(RTMPServerError, "Only CSID 2..63 supported in this minimal sender")
+  if payloadLen < 0: return false
+
+  let chunkSize = max(conn.state.localChunkSize, 1)
+  let ts = max(0, min(timestamp, 0xFFFFFF))
+  let output = bufferevent_get_output(conn.bev)
+  if output == nil: return false
+
+  var h: array[12, byte]
+  h[0] = byte((0 shl 6) or (csid and 0x3F))
+  h[1] = byte((ts shr 16) and 0xFF)
+  h[2] = byte((ts shr 8) and 0xFF)
+  h[3] = byte(ts and 0xFF)
+  h[4] = byte((payloadLen shr 16) and 0xFF)
+  h[5] = byte((payloadLen shr 8) and 0xFF)
+  h[6] = byte(payloadLen and 0xFF)
+  h[7] = byte(msgTypeId and 0xFF)
+  h[8]  = byte(msgStreamId and 0xFF)
+  h[9]  = byte((msgStreamId shr 8) and 0xFF)
+  h[10] = byte((msgStreamId shr 16) and 0xFF)
+  h[11] = byte((msgStreamId shr 24) and 0xFF)
+
+  if evbuffer_add(output, addr h[0], csize_t(h.len)) != 0:
+    return false
+  if payloadLen == 0:
+    return true
+
+  var off = 0
+  var cont: byte = byte((3 shl 6) or (csid and 0x3F))
+
+  while off < payloadLen:
+    let take = min(chunkSize, payloadLen - off)
+    if take > 0:
+      sharedRetain(sp)
+      let rc = evbuffer_add_reference(
+        output,
+        cast[pointer](unsafeAddr sp.bytes[off]),
+        csize_t(take),
+        evbufRefCleanup,
+        cast[pointer](sp)
+      )
+      if rc != 0:
+        sharedRelease(sp)
+        return false
+      off += take
+    if off < payloadLen:
+      if evbuffer_add(output, addr cont, 1) != 0:
+        # If we fail to add the continuation header, we need to
+        # clean up any references already added for this message
+        return false
+  result = true
+
 proc sendRtmpMessage(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int; payload: seq[byte]; timestamp: int = 0): bool =
+  # Use zero-copy for cached payloads (AMF/meta/seq headers)
+  if payload.len > 0 and (msgTypeId == 18 or msgTypeId == 9 or msgTypeId == 8 or msgTypeId == 20):
+    # Wrap in persistent SharedPayload for safe reference
+    let sp = SharedPayload(refs: 0, bytes: payload)
+    return sendRtmpMessageShared(conn, csid, msgTypeId, msgStreamId, sp, timestamp)
+  # Fallback: old method for small/one-off messages
   if conn == nil or conn.bev == nil: return false
   if csid <= 1 or csid >= 64:
     raise newException(RTMPServerError, "Only CSID 2..63 supported in this minimal sender")
@@ -368,7 +568,6 @@ proc sendRtmpMessage(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int;
       buf.add(byte((3 shl 6) or (csid and 0x3F)))
 
   let rc = bufferevent_write(conn.bev, buf[0].addr, csize_t(buf.len))
-  # echo "sendRtmpMessage: csid=", csid, " type=", msgTypeId, " stream=", msgStreamId, " payloadLen=", payload.len
   return rc == 0
 
 proc sendSetChunkSize(conn: ConnCtx; size: int) =
@@ -411,14 +610,21 @@ proc sendAmfCommand(conn: ConnCtx; msgStreamId: int; vals: seq[AMF0Value]) =
 proc getTxnId(vals: seq[AMF0Value]): float64 =
   if vals.len >= 2 and vals[1] != nil and vals[1].typ == AMF0_Number:
     return vals[1].num
-  1.0
+  result = 1.0
 
 # 
 # Read callback
 # 
+# initially attach with nil cbarg; bev_read_cb will create and reattach ConnCtx on first read
 proc bev_read_cb(bev: ptr bufferevent, ctx: pointer) {.cdecl.} =
   var conn = cast[ConnCtx](ctx)
   if conn == nil:
+    var resolvedIp: string
+    let bevKey = cast[pointer](bev)
+    if gPendingClientIp.hasKey(bevKey):
+      resolvedIp = gPendingClientIp[bevKey]
+      gPendingClientIp.del(bevKey)
+
     var local = ConnCtx(
       bev: bev,
       state: RtmpConnState(
@@ -431,7 +637,7 @@ proc bev_read_cb(bev: ptr bufferevent, ctx: pointer) {.cdecl.} =
       hsState: HS_INIT,
       nextStreamId: 1,
       connId: gNextConnId,
-      closed: false,
+      clientIp: resolvedIp,
     )
     gNextConnId.inc
     conn = local
@@ -538,7 +744,7 @@ proc bev_read_cb(bev: ptr bufferevent, ctx: pointer) {.cdecl.} =
           
           # Temporary safety: reply with a generic _result to avoid leaving client waiting
           # echo "Sending generic _result txn=1 to avoid client hang"
-          sendAmfCommand(c, 0, @[ newString("_result"), newNumber(1.0), newNull() ])
+          sendAmfCommand(c, 0, @[ kAmfCmdResult, kAmfNum0, kAmfNull ])
           return
 
         if vals.len == 0 or vals[0] == nil or (vals[0].typ != AMF0_String and vals[0].typ != AMF0_LongString):
@@ -547,12 +753,9 @@ proc bev_read_cb(bev: ptr bufferevent, ctx: pointer) {.cdecl.} =
             discard
           else:
             return
-
         let cmd = vals[0].s
         let txn = getTxnId(vals)
-
         # echo "AMF cmd: ", cmd, " txn=", txn, " msgStreamId=", msgStreamId
-
         if cmd == "connect":
           # Minimal connection setup
           sendWindowAckSize(c, 5_000_000'u32)
@@ -564,26 +767,19 @@ proc bev_read_cb(bev: ptr bufferevent, ctx: pointer) {.cdecl.} =
             "fmsVer": newString("FMS/3,5,7,7009"),
             "capabilities": newNumber(31.0)
           })
-          let info = amfObj({
-            "level": newString("status"),
-            "code": newString("NetConnection.Connect.Success"),
-            "description": newString("Connection succeeded."),
-            "objectEncoding": newNumber(0.0)
-          })
-
-          sendAmfCommand(c, 0, @[ newString("_result"), newNumber(txn), props, info ])
+          sendAmfCommand(c, 0, @[ kAmfCmdResult, newNumber(txn), kPropsConnect, kInfoConnectSuccess ])
           return
 
         if cmd == "releaseStream" or cmd == "FCPublish":
           # Many encoders send these; respond with _result to unblock them.
-          sendAmfCommand(c, 0, @[ newString("_result"), newNumber(txn), newNull(), newNull() ])
+          sendAmfCommand(c, 0, @[ kAmfCmdResult, newNumber(txn), kAmfNull, kAmfNull ])
           return
 
         if cmd == "createStream":
           let sid = c.nextStreamId
           c.nextStreamId.inc
           # echo "createStream -> assigning sid=", sid, " txn=", txn
-          sendAmfCommand(c, 0, @[ newString("_result"), newNumber(txn), newNull(), newNumber(float64(sid)) ])
+          sendAmfCommand(c, 0, @[ kAmfCmdResult, newNumber(txn), kAmfNull, newNumber(float64(sid)) ])
           return
         
         if cmd == "publish":
@@ -606,7 +802,7 @@ proc bev_read_cb(bev: ptr bufferevent, ctx: pointer) {.cdecl.} =
             "description": newString("Start publishing."),
             "details": newString(streamName)
           })
-          sendAmfCommand(c, streamId, @[ newString("onStatus"), newNumber(0.0), newNull(), info ])
+          sendAmfCommand(c, streamId, @[ newString("onStatus"), kAmfNum0, kAmfNull, info ])
           return
         # echo "Command: " & cmd
         if cmd == "play" or cmd == "play2":
@@ -626,7 +822,7 @@ proc bev_read_cb(bev: ptr bufferevent, ctx: pointer) {.cdecl.} =
               "code": newString("NetStream.Play.StreamNotFound"),
               "description": newString("Stream not found")
             })
-            sendAmfCommand(c, sid, @[ newString("onStatus"), newNumber(0.0), newNull(), nf ])
+            sendAmfCommand(c, sid, @[ newString("onStatus"), kAmfNum0, kAmfNull, nf ])
             return
 
           # Stream begin
@@ -641,7 +837,7 @@ proc bev_read_cb(bev: ptr bufferevent, ctx: pointer) {.cdecl.} =
             "code": newString("NetStream.Play.Reset"),
             "description": newString("Resetting play state.")
           })
-          sendAmfCommand(c, sid, @[ newString("onStatus"), newNumber(0.0), newNull(), resetInfo ])
+          sendAmfCommand(c, sid, @[ newString("onStatus"), kAmfNum0, kAmfNull, resetInfo ])
 
           let startInfo = amfObj({
             "level": newString("status"),
@@ -649,17 +845,17 @@ proc bev_read_cb(bev: ptr bufferevent, ctx: pointer) {.cdecl.} =
             "description": newString("Started playing."),
             "details": newString(streamName)
           })
-          sendAmfCommand(c, sid, @[ newString("onStatus"), newNumber(0.0), newNull(), startInfo ])
+          sendAmfCommand(c, sid, @[ newString("onStatus"), kAmfNum0, kAmfNull, startInfo ])
           return
 
         if cmd == "getStreamLength":
           # Some players query stream length before playing; reply with a numeric length (0.0 = unknown)
-          sendAmfCommand(c, 0, @[ newString("_result"), newNumber(txn), newNull(), newNumber(0.0) ])
+          sendAmfCommand(c, 0, @[ kAmfCmdResult, newNumber(txn), kAmfNull, kAmfNum0 ])
           return
 
         if cmd == "closeStream":
           # closeStream: reply with _result if txn provided and cleanup subscriptions
-          sendAmfCommand(c, msgStreamId, @[ newString("_result"), newNumber(txn), newNull() ])
+          sendAmfCommand(c, msgStreamId, @[ kAmfCmdResult, newNumber(txn), kAmfNull ])
           removeSubscriptionsByStreamId(c, msgStreamId)
           if c.publishedStreamId == msgStreamId and c.publishedStreamName.len > 0:
             removePublisher(c.publishedStreamName)
@@ -669,25 +865,24 @@ proc bev_read_cb(bev: ptr bufferevent, ctx: pointer) {.cdecl.} =
 
         if cmd == "deleteStream":
           # deleteStream: reply with _result and cleanup
-          sendAmfCommand(c, msgStreamId, @[ newString("_result"), newNumber(txn), newNull() ])
+          sendAmfCommand(c, msgStreamId, @[ kAmfCmdResult, newNumber(txn), kAmfNull ])
           removeSubscriptionsByStreamId(c, msgStreamId)
           if c.publishedStreamId == msgStreamId and c.publishedStreamName.len > 0:
             removePublisher(c.publishedStreamName)
-            c.publishedStreamName = ""
-            c.publishedStreamId = 0
+            reset(c.publishedStreamName)
+            reset(c.publishedStreamId)
           return
 
         if cmd == "FCUnpublish" or cmd == "unpublish":
           # explicit unpublish request from publisher
           if c.publishedStreamName.len > 0:
             removePublisher(c.publishedStreamName)
-            c.publishedStreamName = ""
-            c.publishedStreamId = 0
-          sendAmfCommand(c, msgStreamId, @[ newString("_result"), newNumber(txn), newNull() ])
+            reset(c.publishedStreamName)
+            reset(c.publishedStreamId)
+          sendAmfCommand(c, msgStreamId, @[ kAmfCmdResult, newNumber(txn), kAmfNull ])
           return
 
-        if not isDataMsg:
-          return
+        if not isDataMsg: return
 
       # Forward media (audio/video) and metadata (AMF0 data type 18) from publisher to subscribers
       if (msgTypeId == 8 or msgTypeId == 9 or msgTypeId == 18) and payloadLen > 0 and payloadPtr != nil:
@@ -699,23 +894,78 @@ proc bev_read_cb(bev: ptr bufferevent, ctx: pointer) {.cdecl.} =
           elif c.publishedStreamName.len > 0 and se.name == c.publishedStreamName and se.publisherStreamId == msgStreamId:
             # fallback: match by stream name if publisher pointer didn't line up
             matchPub = true
-          if not matchPub:
-            continue
-          var payload: seq[byte] = newSeq[byte](payloadLen)
-          let src = cast[ptr UncheckedArray[byte]](payloadPtr)
-          for i in 0 ..< payloadLen:
-            payload[i] = src[i]
-          # echo "Forwarding msgTypeId=", msgTypeId, " stream=", name, " len=", payload.len, " subs=", se.subscribers.len
+          
+          if not matchPub: continue # not the stream we're publishing to
+
+          # detect cache-worthy packets directly from payloadPtr (no copy yet)
+          var
+            isVideoSeq: bool
+            isAudioSeq: bool
+            isVideoKeyframe: bool
+
+          let bp = cast[ptr UncheckedArray[byte]](payloadPtr)
+          if msgTypeId == 9 and payloadLen >= 2:
+            let codecId = bp[0] and 0x0F'u8
+            let frameType = (bp[0] shr 4) and 0x0F'u8
+            isVideoKeyframe = frameType == 1'u8
+            isVideoSeq = (codecId == 7'u8 and bp[1] == 0'u8)
+          elif msgTypeId == 8 and payloadLen >= 2:
+            let soundFormat = (bp[0] shr 4) and 0x0F
+            isAudioSeq = (soundFormat == 10 and bp[1] == 0'u8)
+
+          let needCache = (msgTypeId == 18) or isVideoSeq or isAudioSeq
+          let hasSubs = se.subscribers.len > 0
+          if not hasSubs and not needCache:
+            break
+
+          let shared = newSharedPayload(payloadPtr, payloadLen)
+
           var dropSubs: seq[SubscriberEntry] = @[]
           for s in se.subscribers:
             if s.conn == nil or s.conn.bev == nil or s.conn.closed:
               dropSubs.add(s)
               continue
-            # Use CSID 4 for forwarded messages; preserve subscriber's message stream id
-            if not sendRtmpMessage(s.conn, csid = 4, msgTypeId = msgTypeId, msgStreamId = s.msgStreamId, payload = payload, timestamp = int(timestamp)):
+
+            let output = bufferevent_get_output(s.conn.bev)
+            if output == nil:
               dropSubs.add(s)
               continue
-            # echo "  -> forwarded to subscriber conn=", $(cast[int](addr(s.conn))), " msgStreamId=", s.msgStreamId, " ts=", timestamp
+
+            let nowTick = epochMs()
+            let outq = cast[int](evbuffer_get_length(output))
+
+            # Force jump-to-live when queue is too large.
+            if outq > MAX_SUBSCRIBER_OUTBUF:
+              if (nowTick - s.conn.lastLiveJumpMs) >= LIVE_JUMP_COOLDOWN_MS:
+                let qlen = evbuffer_get_length(output)
+                if qlen > 0:
+                  discard evbuffer_drain(output, qlen)
+                s.conn.slowSubscriber = true
+                s.conn.waitForKeyframe = true
+                s.conn.lastLiveJumpMs = nowTick
+              continue
+
+            # Recover only on a keyframe and only when queue is low enough.
+            if s.conn.slowSubscriber or s.conn.waitForKeyframe:
+              if outq > SLOW_SUBSCRIBER_RESUME_OUTBUF:
+                continue
+              if msgTypeId != 9 or not isVideoKeyframe:
+                continue
+
+              if se.metaPayload.len > 0:
+                discard sendRtmpMessage(s.conn, csid = 4, msgTypeId = 18, msgStreamId = s.msgStreamId, payload = se.metaPayload)
+              if se.audioSeqPayload.len > 0:
+                discard sendRtmpMessage(s.conn, csid = 4, msgTypeId = 8, msgStreamId = s.msgStreamId, payload = se.audioSeqPayload)
+              if se.videoSeqPayload.len > 0:
+                discard sendRtmpMessage(s.conn, csid = 4, msgTypeId = 9, msgStreamId = s.msgStreamId, payload = se.videoSeqPayload)
+
+              s.conn.slowSubscriber = false
+              s.conn.waitForKeyframe = false
+
+            if not sendRtmpMessageShared(s.conn, 4, msgTypeId, s.msgStreamId, shared, int(timestamp)):
+              dropSubs.add(s)
+              continue
+
           if dropSubs.len > 0:
             var aliveSubs: seq[SubscriberEntry] = @[]
             for s in se.subscribers:
@@ -727,26 +977,16 @@ proc bev_read_cb(bev: ptr bufferevent, ctx: pointer) {.cdecl.} =
               if keep:
                 aliveSubs.add(s)
             se.subscribers = aliveSubs
-          
-          # if se.subscribers.len == 0:
-          #   echo "  (no subscribers for stream=", name, ")"
 
-          # Cache metadata and sequence headers from publisher
-          if msgTypeId == 18:
-            se.metaPayload = payload
-          elif msgTypeId == 9:
-            # Video: detect AVC sequence header (AVCPacketType == 0)
-            if payload.len >= 2:
-              let first = payload[0]
-              let codecId = first and 0x0F'u8
-              if codecId == 7'u8 and payload[1] == 0'u8:
-                se.videoSeqPayload = payload
-          elif msgTypeId == 8:
-            # Audio: detect AAC sequence header (AACPacketType == 0)
-            if payload.len >= 2:
-              let soundFormat = (payload[0] shr 4) and 0x0F
-              if soundFormat == 10 and payload[1] == 0'u8:
-                se.audioSeqPayload = payload
+          # cache copy for future subscribers
+          if needCache:
+            if msgTypeId == 18:
+              se.metaPayload = shared.bytes
+            elif isVideoSeq:
+              se.videoSeqPayload = shared.bytes
+            elif isAudioSeq:
+              se.audioSeqPayload = shared.bytes
+
           break
 
       # bookkeeping: count bytes received and send ACK when threshold hit
@@ -839,11 +1079,50 @@ proc accept_cb(listenFd: cint, events: cshort, arg: pointer) {.cdecl.} =
   if bev == nil:
     discard close(SocketHandle(clientFd))
     return
-  # initially attach with nil cbarg; bev_read_cb will create and reattach ConnCtx on first read
+
+  # Extract IP address as string
+  var ipStr: array[32, char]
+  ipStr[0] = '\0'
+  let sa = cast[ptr Sockaddr_in](addr clientAddr)
+  discard inet_ntop(AF_INET, addr sa.sin_addr, addr ipStr[0], int32(ipStr.len))
+  # stash IP by bev pointer (cannot capture local in cdecl callback)
+  gPendingClientIp[cast[pointer](bev)] = $cstring(addr ipStr[0])
+
   bufferevent_setcb(bev, bev_read_cb, nil, bev_event_cb, nil)
   discard bufferevent_enable(bev, EV_READ or EV_WRITE)
 
-proc startServer*(port: int = DEFAULT_RTMP_PORT) =
+#
+# REST API listener handle
+#
+proc bindApiListener(server: RTMPServer, port: int) =
+  # Bind a REST API listener on a separate port.
+  server.restApiHttp = evhttp_new(server.base)
+  if server.restApiHttp == nil:
+    raise newException(RTMPServerError, "Failed to create REST API http server")
+
+  evhttp_set_gencb(server.restApiHttp, apiRequestCb, nil)
+
+  let bound = evhttp_bind_socket_with_handle(server.restApiHttp, "0.0.0.0", uint16(port))
+  if bound == nil:
+    evhttp_free(server.restApiHttp)
+    server.restApiHttp = nil
+    raise newException(RTMPServerError, "Failed to bind REST API port " & $port)
+  server.restApiListener = evhttp_bound_socket_get_listener(bound)
+
+
+#
+# Public API
+#
+proc newRTMPServer*: RTMPServer =
+  new(result)
+  result.base = event_base_new()
+  if result.base == nil:
+    raise newException(RTMPServerError,
+          "Failed to create event base")
+  # Bind REST API listener on separate port (default 8000)
+  result.bindApiListener(8000)
+
+proc startServer*(server: RTMPServer, port: Port = Port(DEFAULT_RTMP_PORT)) =
   ## Start RTMP server on specified port (default 1935)
   ## This is a blocking call that runs the event loop; it will not return
   ## until the server is stopped.
@@ -855,19 +1134,14 @@ proc startServer*(port: int = DEFAULT_RTMP_PORT) =
   sockAddr.sin_family = AF_INET.uint8
   sockAddr.sin_port = htons(port.uint16)
   sockAddr.sin_addr.s_addr = inet_addr("0.0.0.0")
-  
+
   if bindSocket(listenFd, cast[ptr SockAddr](addr sockAddr), SockLen(sizeof(sockAddr))) < 0:
     raise newException(RTMPServerError, "Failed to bind socket")
   
   if listen(listenFd, 128) < 0:
-    raise newException(RTMPServerError, "Failed to listen on socket")
-
-  let base = event_base_new()
-  if base == nil:
-    raise newException(RTMPServerError, "Failed to create event base")
-
-  let ev = event_new(base, listenFd.cint, EV_READ or EV_PERSIST, accept_cb, base)
+    raise newException(RTMPServerError, "Failed to listen on socket")  
+  let ev = event_new(server.base, listenFd.cint, EV_READ or EV_PERSIST, accept_cb, server.base)
   if ev == nil:
     raise newException(RTMPServerError, "Failed to create event")
   discard event_add(ev, nil)
-  discard event_base_dispatch(base)
+  discard event_base_dispatch(server.base)
