@@ -77,6 +77,15 @@ type
       ## Table of active streams by stream ID; can be used
       ## to track per-stream state if needed
   
+  RtmpServerSettings* = object
+    enableRestApi*: bool = true
+      ## Whether to enable the REST API for stream management (default: true)
+    restApiPort*: Port = Port(4000)
+      ## Port for the REST API listener (default: 4000)
+    rtmpPort*: Port = Port(DEFAULT_RTMP_PORT)
+      ## Port for the RTMP server to listen on (default: 1935)
+    # todo: add more settings here as needed (e.g., max connections, timeouts, etc)
+
   RtmpServer* = ref object
     ## Main RTMP server object holding the server context and any global state
     base*: ptr event_base
@@ -87,6 +96,8 @@ type
       ## Listener used by the REST API HTTP server
     restApiHttp*: ptr evhttp
       ## Libevent HTTP server handle for REST API
+    settings: RtmpServerSettings
+      ## Configuration settings for the RTMP server
 
   RTMPServerError* = object of CatchableError
 
@@ -1094,7 +1105,7 @@ proc accept_cb(listenFd: cint, events: cshort, arg: pointer) {.cdecl.} =
 #
 # REST API listener handle
 #
-proc bindApiListener(server: RTMPServer, port: int) =
+proc bindApiListener(server: RTMPServer, port: Port) =
   # Bind a REST API listener on a separate port.
   server.restApiHttp = evhttp_new(server.base)
   if server.restApiHttp == nil:
@@ -1113,26 +1124,32 @@ proc bindApiListener(server: RTMPServer, port: int) =
 #
 # Public API
 #
-proc newRTMPServer*: RTMPServer =
+proc newRTMPServer*(settings: RtmpServerSettings = RtmpServerSettings()): RTMPServer =
+  ## Creates a new RTMP server instance with the specified settings. This initializes the
+  ## event base and binds the REST API listener if enabled.
   new(result)
   result.base = event_base_new()
+  result.settings = settings
   if result.base == nil:
     raise newException(RTMPServerError,
           "Failed to create event base")
-  # Bind REST API listener on separate port (default 8000)
-  result.bindApiListener(8000)
+  # Bind REST API listener on separate port (default 4000)
+  result.bindApiListener(settings.restApiPort)
 
-proc startServer*(server: RTMPServer, port: Port = Port(DEFAULT_RTMP_PORT)) =
+proc startServer*(server: RTMPServer) =
   ## Start RTMP server on specified port (default 1935)
+  ## 
   ## This is a blocking call that runs the event loop; it will not return
   ## until the server is stopped.
   var listenFd = socket(AF_INET, SOCK_STREAM, 0)
   if listenFd.int < 0:
     raise newException(RTMPServerError, "Failed to create socket")
   setReuseAndNonblock(listenFd.cint)
+
+  # Bind to all interfaces on the specified port
   var sockAddr: Sockaddr_in
   sockAddr.sin_family = AF_INET.uint8
-  sockAddr.sin_port = htons(port.uint16)
+  sockAddr.sin_port = htons(server.settings.rtmpPort.uint16)
   sockAddr.sin_addr.s_addr = inet_addr("0.0.0.0")
 
   if bindSocket(listenFd, cast[ptr SockAddr](addr sockAddr), SockLen(sizeof(sockAddr))) < 0:
