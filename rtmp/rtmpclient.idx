@@ -21,7 +21,7 @@ nim	AacStreamState	rtmp/rtmpclient.html#AacStreamState	type AacStreamState		74
 nim	ChunkStreamState	rtmp/rtmpclient.html#ChunkStreamState	object ChunkStreamState		109
 nim	RtmpClient	rtmp/rtmpclient.html#RtmpClient	type RtmpClient		117
 nim	startStreamAacAdtsZeroCopy	rtmp/rtmpclient.html#startStreamAacAdtsZeroCopy,RtmpClient,string,uint32,uint8,int,uint32	proc startStreamAacAdtsZeroCopy(client: RtmpClient; filePath: string;\n                           msgStreamId: uint32; csid: uint8 = 4'u8;\n                           lowWater: int = 256 * 1024; startTs: uint32 = 0'u32)		889
-nim	onEvent	rtmp/rtmpclient.html#onEvent,ptr.bufferevent,cshort,pointer	proc onEvent(bev: ptr bufferevent; what: cshort; ctx: pointer)		923
-nim	startStreamFlvZeroCopy	rtmp/rtmpclient.html#startStreamFlvZeroCopy,RtmpClient,string,uint32,int,uint32	proc startStreamFlvZeroCopy(client: RtmpClient; filePath: string;\n                       msgStreamId: uint32; lowWater: int = 256 * 1024;\n                       startTs: uint32 = 0'u32)		1077
-nim	newRtmpClient	rtmp/rtmpclient.html#newRtmpClient,string	proc newRtmpClient(address: string): RtmpClient		1106
-nim	startPacer	rtmp/rtmpclient.html#startPacer,RtmpClient,proc(RtmpClient)	proc startPacer(client: RtmpClient; initCb: proc (c: RtmpClient) = nil)		1252
+nim	onEvent	rtmp/rtmpclient.html#onEvent,ptr.bufferevent,cshort,pointer	proc onEvent(bev: ptr bufferevent; what: cshort; ctx: pointer)		924
+nim	startStreamFlvZeroCopy	rtmp/rtmpclient.html#startStreamFlvZeroCopy,RtmpClient,string,uint32,int,uint32	proc startStreamFlvZeroCopy(client: RtmpClient; filePath: string;\n                       msgStreamId: uint32; lowWater: int = 256 * 1024;\n                       startTs: uint32 = 0'u32)		1078
+nim	newRtmpClient	rtmp/rtmpclient.html#newRtmpClient,string	proc newRtmpClient(address: string): RtmpClient		1108
+nim	startPacer	rtmp/rtmpclient.html#startPacer,RtmpClient,proc(RtmpClient)	proc startPacer(client: RtmpClient; initCb: proc (c: RtmpClient) = nil)		1256

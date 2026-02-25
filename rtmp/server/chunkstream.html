@@ -56,25 +56,25 @@
     <summary><a class="reference reference-toplevel" href="#7" id="57">Types</a></summary>
     <ul class="simple simple-toc-section">
       <li><a class="reference" href="#ChunkHeader" title="ChunkHeader = object
-  timestamp*: uint32
-  msgLength*: int
-  msgTypeId*: int
-  msgStreamId*: int">ChunkHeader</a></li>
+  timestamp*: uint32         ## The timestamp of the message, used for synchronization and ordering
+  msgLength*: int            ## The length of the message payload in bytes
+  msgTypeId*: int            ## The type ID of the message, indicating the kind of data (e.g., audio, video, command)
+  msgStreamId*: int          ## The stream ID associated with the message, used to identify the logical stream it belongs to">ChunkHeader</a></li>
 <li><a class="reference" href="#ChunkMessageCb" title="ChunkMessageCb = proc (msgTypeId: int; msgStreamId: int; timestamp: uint32;
                        payloadPtr: ptr byte; payloadLen: int; arg: pointer)">ChunkMessageCb</a></li>
 <li><a class="reference" href="#ChunkStreamCtx" title="ChunkStreamCtx = ref object
-  streams*: Table[int, ChunkStreamState]
-  peerChunkSize*: int
-  onMessageCb*: ChunkMessageCb
-  cbArg*: pointer
-  partialCsid*: int">ChunkStreamCtx</a></li>
+  streams*: Table[int, ChunkStreamState] ## A mapping of chunk stream IDs to their current state, allowing for concurrent processing of multiple streams
+  peerChunkSize*: int        ## The chunk size used by the peer (server or client), which determines how many bytes to read for each chunk
+  onMessageCb*: ChunkMessageCb ## Callback function to invoke when a complete message has been assembled from chunks
+  cbArg*: pointer            ## User-defined argument to pass to the callback function when invoked
+  partialCsid*: int          ## If currently in the middle of processing a chunk, this holds the chunk stream ID; otherwise -1">ChunkStreamCtx</a></li>
 <li><a class="reference" href="#ChunkStreamState" title="ChunkStreamState = ref object
-  lastHeader*: ChunkHeader
-  lastTimestampDelta*: uint32
-  chunkRemaining*: int
-  payload*: seq[byte]
-  bytesRead*: int
-  remaining*: int">ChunkStreamState</a></li>
+  lastHeader*: ChunkHeader   ## The last parsed chunk header for this stream, containing metadata about the current message being assembled
+  lastTimestampDelta*: uint32 ## The last timestamp delta received, used for calculating absolute timestamps when not provided
+  chunkRemaining*: int       ## The number of bytes remaining in the current chunk being processed
+  payload*: seq[byte]        ## The assembled payload for the current message, built up from received chunks
+  bytesRead*: int            ## The total number of bytes read so far for the current message
+  remaining*: int            ## The total number of bytes remaining to complete the current message">ChunkStreamState</a></li>
 
     </ul>
   </details>
@@ -117,10 +117,10 @@
   <dl class="item">
     <div id="ChunkHeader">
   <dt><pre><a href="chunkstream.html#ChunkHeader"><span class="Identifier">ChunkHeader</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">timestamp</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>
-  <span class="Identifier">msgLength</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
-  <span class="Identifier">msgTypeId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
-  <span class="Identifier">msgStreamId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span></pre></dt>
+  <span class="Identifier">timestamp</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>         <span class="Comment">## The timestamp of the message, used for synchronization and ordering</span>
+  <span class="Identifier">msgLength</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>            <span class="Comment">## The length of the message payload in bytes</span>
+  <span class="Identifier">msgTypeId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>            <span class="Comment">## The type ID of the message, indicating the kind of data (e.g., audio, video, command)</span>
+  <span class="Identifier">msgStreamId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>          <span class="Comment">## The stream ID associated with the message, used to identify the logical stream it belongs to</span></pre></dt>
   <dd>
     
     Represents the header of an RTMP chunk, containing metadata about the message being received.
@@ -138,11 +138,11 @@
 </div>
 <div id="ChunkStreamCtx">
   <dt><pre><a href="chunkstream.html#ChunkStreamCtx"><span class="Identifier">ChunkStreamCtx</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
-  <span class="Identifier">streams</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">int</span><span class="Other">,</span> <a href="chunkstream.html#ChunkStreamState"><span class="Identifier">ChunkStreamState</span></a><span class="Other">]</span>
-  <span class="Identifier">peerChunkSize</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
-  <span class="Identifier">onMessageCb</span><span class="Operator">*</span><span class="Other">:</span> <a href="chunkstream.html#ChunkMessageCb"><span class="Identifier">ChunkMessageCb</span></a>
-  <span class="Identifier">cbArg</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">pointer</span>
-  <span class="Identifier">partialCsid</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span></pre></dt>
+  <span class="Identifier">streams</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">int</span><span class="Other">,</span> <a href="chunkstream.html#ChunkStreamState"><span class="Identifier">ChunkStreamState</span></a><span class="Other">]</span> <span class="Comment">## A mapping of chunk stream IDs to their current state, allowing for concurrent processing of multiple streams</span>
+  <span class="Identifier">peerChunkSize</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>        <span class="Comment">## The chunk size used by the peer (server or client), which determines how many bytes to read for each chunk</span>
+  <span class="Identifier">onMessageCb</span><span class="Operator">*</span><span class="Other">:</span> <a href="chunkstream.html#ChunkMessageCb"><span class="Identifier">ChunkMessageCb</span></a> <span class="Comment">## Callback function to invoke when a complete message has been assembled from chunks</span>
+  <span class="Identifier">cbArg</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">pointer</span>            <span class="Comment">## User-defined argument to pass to the callback function when invoked</span>
+  <span class="Identifier">partialCsid</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>          <span class="Comment">## If currently in the middle of processing a chunk, this holds the chunk stream ID; otherwise -1</span></pre></dt>
   <dd>
     
     Context for managing multiple chunk streams, tracking their states, peer chunk size, and callback for completed messages.
@@ -151,12 +151,12 @@
 </div>
 <div id="ChunkStreamState">
   <dt><pre><a href="chunkstream.html#ChunkStreamState"><span class="Identifier">ChunkStreamState</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
-  <span class="Identifier">lastHeader</span><span class="Operator">*</span><span class="Other">:</span> <a href="chunkstream.html#ChunkHeader"><span class="Identifier">ChunkHeader</span></a>
-  <span class="Identifier">lastTimestampDelta</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>
-  <span class="Identifier">chunkRemaining</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
-  <span class="Identifier">payload</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span>
-  <span class="Identifier">bytesRead</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
-  <span class="Identifier">remaining</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span></pre></dt>
+  <span class="Identifier">lastHeader</span><span class="Operator">*</span><span class="Other">:</span> <a href="chunkstream.html#ChunkHeader"><span class="Identifier">ChunkHeader</span></a>   <span class="Comment">## The last parsed chunk header for this stream, containing metadata about the current message being assembled</span>
+  <span class="Identifier">lastTimestampDelta</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span> <span class="Comment">## The last timestamp delta received, used for calculating absolute timestamps when not provided</span>
+  <span class="Identifier">chunkRemaining</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>       <span class="Comment">## The number of bytes remaining in the current chunk being processed</span>
+  <span class="Identifier">payload</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span>        <span class="Comment">## The assembled payload for the current message, built up from received chunks</span>
+  <span class="Identifier">bytesRead</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>            <span class="Comment">## The total number of bytes read so far for the current message</span>
+  <span class="Identifier">remaining</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>            <span class="Comment">## The total number of bytes remaining to complete the current message</span></pre></dt>
   <dd>
     
     Maintains the state of an individual chunk stream, including the last header information, timestamp delta, and payload assembly.
@@ -199,7 +199,7 @@
     <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    
+    Registers a callback function to be invoked when a complete message has been assembled from chunks. The callback will receive the message type ID, stream ID, timestamp, payload pointer and length, and a user-defined argument.
     
   </dd>
 </div>
@@ -211,7 +211,7 @@
     <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    
+    Sets the peer chunk size in the context, which determines how many bytes to read for each chunk when processing incoming data.
     
   </dd>
 </div>
@@ -227,7 +227,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-25 14:06:25 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-25 14:07:56 UTC</small>
       </div>
     </div>
   </div>
