@@ -96,7 +96,8 @@
   base*: ptr event_base      ## Libevent base for managing events
   listenFd*: cint            ## File descriptor for the listening socket
   restApiListener*: ptr evconnlistener ## Listener used by the REST API HTTP server
-  restApiHttp*: ptr evhttp   ## Libevent HTTP server handle for REST API">RtmpServer</a></li>
+  restApiHttp*: ptr evhttp   ## Libevent HTTP server handle for REST API
+  settings*: RtmpServerSettings ## Configuration settings for the RTMP server">RtmpServer</a></li>
 <li><a class="reference" href="#RTMPServerError" title="RTMPServerError = object of CatchableError">RTMPServerError</a></li>
 <li><a class="reference" href="#RtmpServerSettings" title="RtmpServerSettings = object
   enableRestApi*: bool = true ## Whether to enable the REST API for stream management (default: true)
@@ -242,7 +243,8 @@
   <span class="Identifier">base</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">event_base</span>      <span class="Comment">## Libevent base for managing events</span>
   <span class="Identifier">listenFd</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">cint</span>            <span class="Comment">## File descriptor for the listening socket</span>
   <span class="Identifier">restApiListener</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">evconnlistener</span> <span class="Comment">## Listener used by the REST API HTTP server</span>
-  <span class="Identifier">restApiHttp</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">evhttp</span>   <span class="Comment">## Libevent HTTP server handle for REST API</span></pre></dt>
+  <span class="Identifier">restApiHttp</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">evhttp</span>   <span class="Comment">## Libevent HTTP server handle for REST API</span>
+  <span class="Identifier">settings</span><span class="Operator">*</span><span class="Other">:</span> <a href="rtmpserver.html#RtmpServerSettings"><span class="Identifier">RtmpServerSettings</span></a> <span class="Comment">## Configuration settings for the RTMP server</span></pre></dt>
   <dd>
     
     Main RTMP server object holding the server context and any global state
@@ -456,7 +458,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-25 14:17:33 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-25 14:18:12 UTC</small>
       </div>
     </div>
   </div>
