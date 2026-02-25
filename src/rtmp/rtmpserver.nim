@@ -96,7 +96,7 @@ type
       ## Listener used by the REST API HTTP server
     restApiHttp*: ptr evhttp
       ## Libevent HTTP server handle for REST API
-    settings: RtmpServerSettings
+    settings*: RtmpServerSettings
       ## Configuration settings for the RTMP server
 
   RTMPServerError* = object of CatchableError
