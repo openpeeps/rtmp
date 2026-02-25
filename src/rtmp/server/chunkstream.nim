@@ -13,28 +13,43 @@ type
   ChunkHeader* = object
     ## Represents the header of an RTMP chunk, containing metadata about the message being received.
     timestamp*: uint32
+      ## The timestamp of the message, used for synchronization and ordering
     msgLength*: int
+      ## The length of the message payload in bytes
     msgTypeId*: int
+      ## The type ID of the message, indicating the kind of data (e.g., audio, video, command)
     msgStreamId*: int
+      ## The stream ID associated with the message, used to identify the logical stream it belongs to
 
   ChunkStreamState* = ref object
     ## Maintains the state of an individual chunk stream, including
     ## the last header information, timestamp delta, and payload assembly.
     lastHeader*: ChunkHeader
+      ## The last parsed chunk header for this stream, containing metadata about the current message being assembled
     lastTimestampDelta*: uint32
+      ## The last timestamp delta received, used for calculating absolute timestamps when not provided
     chunkRemaining*: int
+      ## The number of bytes remaining in the current chunk being processed
     payload*: seq[byte]
+      ## The assembled payload for the current message, built up from received chunks
     bytesRead*: int
+      ## The total number of bytes read so far for the current message
     remaining*: int
+      ## The total number of bytes remaining to complete the current message
 
   ChunkStreamCtx* = ref object
     ## Context for managing multiple chunk streams, tracking their states,
     ## peer chunk size, and callback for completed messages.
     streams*: Table[int, ChunkStreamState]
+      ## A mapping of chunk stream IDs to their current state, allowing for concurrent processing of multiple streams
     peerChunkSize*: int
+      ## The chunk size used by the peer (server or client), which determines how many bytes to read for each chunk
     onMessageCb*: ChunkMessageCb
+      ## Callback function to invoke when a complete message has been assembled from chunks
     cbArg*: pointer
+      ## User-defined argument to pass to the callback function when invoked
     partialCsid*: int
+      ## If currently in the middle of processing a chunk, this holds the chunk stream ID; otherwise -1
 
   BytePtr = ptr UncheckedArray[byte]
 
@@ -56,15 +71,19 @@ proc initChunkStreamCtx*(peerChunkSize: int = 128): ChunkStreamCtx =
   )
 
 proc setPeerChunkSize*(ctx: ChunkStreamCtx, size: int) =
+  ## Sets the peer chunk size in the context, which determines how many bytes to read for each chunk when processing incoming data.
   if ctx == nil or size <= 0: return
   ctx.peerChunkSize = size
 
 proc setOnMessage*(ctx: ChunkStreamCtx, cb: ChunkMessageCb, arg: pointer) =
+  ## Registers a callback function to be invoked when a complete message has been assembled from chunks. The callback will receive the message type ID, stream ID, timestamp, payload pointer and length, and a user-defined argument.
   if ctx == nil: return
   ctx.onMessageCb = cb
   ctx.cbArg = arg
 
+#
 # internal helpers
+#
 proc ensureStreamState(ctx: ChunkStreamCtx, csid: int): ChunkStreamState =
   var st = ctx.streams.getOrDefault(csid, nil)
   if st == nil:
@@ -79,8 +98,8 @@ proc ensureStreamState(ctx: ChunkStreamCtx, csid: int): ChunkStreamState =
     ctx.streams[csid] = st
   return st
 
-# read helpers using pointer+bounds
 proc canRead(data: ptr byte, len, idx, need: int): bool =
+  # read helpers using pointer+bounds to avoid out-of-bounds access
   return idx + need <= len
 
 proc read3BE(data: ptr byte, idx: var int, len: int): Option[uint32] =
@@ -111,14 +130,12 @@ proc read4LEint(data: ptr byte, idx: var int, len: int): Option[int] =
   idx += 4
   some(v)
 
-# feedBytes: consume as many bytes as possible; return consumed count
 proc feedBytes*(ctx: ChunkStreamCtx, data: ptr byte, len: int): int =
+  # feedBytes: consume as many bytes as possible; return consumed count
   var i = 0
   if ctx == nil or data == nil or len <= 0:
     return 0
-
   let p = asBytePtr(data)
-
   while i < len:
     # if we're mid-chunk (payload continuation), consume
     # payload without parsing a new header
@@ -236,7 +253,6 @@ proc feedBytes*(ctx: ChunkStreamCtx, data: ptr byte, len: int): int =
 
     # header parsed; set i to payload start
     i = idx
-
     # update stream state
     let st = ensureStreamState(ctx, csid)
     if fmt == 0:
@@ -335,5 +351,4 @@ proc feedBytes*(ctx: ChunkStreamCtx, data: ptr byte, len: int): int =
       #   echo "chunk partial: csid=", csid, " type=", st.lastHeader.msgTypeId,
       #        " msgLen=", st.lastHeader.msgLength, " bytesRead=", st.bytesRead,
       #        " remaining=", st.remaining, " chunkRemaining=", st.chunkRemaining
-
   return i

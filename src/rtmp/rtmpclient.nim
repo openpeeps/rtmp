@@ -889,7 +889,8 @@ proc pushNextAacFrame(client: RtmpClient): bool =
 proc startStreamAacAdtsZeroCopy*(client: RtmpClient, filePath: string,
                                  msgStreamId: uint32, csid: uint8 = 4'u8,
                                  lowWater: int = 256 * 1024, startTs: uint32 = 0'u32) =
-  # Start streaming AAC from ADTS file with zero-copy
+  ## Start streaming an ADTS AAC file with zero-copy file segments.
+  ## The file is expected to contain raw ADTS frames (no container).
   let fd = posix.open(filePath, O_RDONLY)
   if fd < 0:
     if client.onStreamError != nil:
@@ -1077,7 +1078,8 @@ proc pushNextFlvTag(client: RtmpClient): bool =
 proc startStreamFlvZeroCopy*(client: RtmpClient, filePath: string,
                             msgStreamId: uint32,
                             lowWater: int = 256 * 1024, startTs: uint32 = 0'u32) =
-  # Start streaming FLV from file with zero-copy
+  ## Start streaming an FLV file with zero-copy file segments.
+  ## This is suitable for streaming pre-recorded FLV files
   let fd = posix.open(filePath, O_RDONLY)
   if fd < 0:
     return
@@ -1105,7 +1107,9 @@ proc startStreamFlvZeroCopy*(client: RtmpClient, filePath: string,
 
 proc newRtmpClient*(address: string): RtmpClient =
   ## Create new RTMP client and initiate connection to address.
-  ## Address should be in form "rtmp://host[:port]/app/streamKey". Port is optional (default 1935 for rtmp, 443 for rtmps).
+  ## Address should be in form "rtmp://host[:port]/app/streamKey".
+  ## 
+  ## Port is optional (default 1935 for rtmp, 443 for rtmps).
   let base = event_base_new()
   let bev = bufferevent_socket_new(base, -1, BEV_OPT_CLOSE_ON_FREE)
   let uri = parseUri(address)
