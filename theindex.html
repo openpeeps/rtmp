@@ -25,7 +25,7 @@
   <div class="document" id="documentId">
     <div class="container">
       <h1 class="title">Index</h1>
-      Modules: <a href="index.html">rtmp</a>, <a href="rtmp/rtmpclient.html">rtmp/rtmpclient</a>, <a href="rtmp/rtmpplaylist.html">rtmp/rtmpplaylist</a>, <a href="rtmp/rtmpserver.html">rtmp/rtmpserver</a>, <a href="rtmp/server/actionmessage.html">rtmp/server/actionmessage</a>, <a href="rtmp/server/chunkstream.html">rtmp/server/chunkstream</a>.<br/><p /><h2>API symbols</h2>
+      Modules: <a href="index.html">rtmp</a>, <a href="rtmp/rtmpclient.html">rtmp/rtmpclient</a>, <a href="rtmp/rtmpplaylist.html">rtmp/rtmpplaylist</a>, <a href="rtmp/rtmpserver.html">rtmp/rtmpserver</a>, <a href="rtmp/server/actionmessage.html">rtmp/server/actionmessage</a>, <a href="rtmp/server/chunkstream.html">rtmp/server/chunkstream</a>, <a href="rtmp/server/rtmpmonitor.html">rtmp/server/rtmpmonitor</a>.<br/><p /><h2>API symbols</h2>
 <dl><dt><a name="AacStreamState" href="#AacStreamState"><span>AacStreamState:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpclient: type AacStreamState" href="rtmp/rtmpclient.html#AacStreamState">rtmpclient: type AacStreamState</a></li>
@@ -82,6 +82,10 @@
 <li><a class="reference external"
           data-doc-search-tag="actionmessage: proc amfObj(pairs: openArray[(string, AMF0Value)]): AMF0Value" href="rtmp/server/actionmessage.html#amfObj%2CopenArray%5B%5D">actionmessage: proc amfObj(pairs: openArray[(string, AMF0Value)]): AMF0Value</a></li>
           </ul></dd>
+<dt><a name="apiRequestCb" href="#apiRequestCb"><span>apiRequestCb:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpmonitor: proc apiRequestCb(req: ptr evhttp_request; arg: pointer)" href="rtmp/server/rtmpmonitor.html#apiRequestCb%2Cptr.evhttp_request%2Cpointer">rtmpmonitor: proc apiRequestCb(req: ptr evhttp_request; arg: pointer)</a></li>
+          </ul></dd>
 <dt><a name="ChunkHeader" href="#ChunkHeader"><span>ChunkHeader:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="chunkstream: object ChunkHeader" href="rtmp/server/chunkstream.html#ChunkHeader">chunkstream: object ChunkHeader</a></li>
@@ -130,6 +134,10 @@
 <li><a class="reference external"
           data-doc-search-tag="rtmpserver: const DEFAULT_RTMP_PORT" href="rtmp/rtmpserver.html#DEFAULT_RTMP_PORT">rtmpserver: const DEFAULT_RTMP_PORT</a></li>
           </ul></dd>
+<dt><a name="dumpHook" href="#dumpHook"><span>dumpHook:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpmonitor: proc dumpHook(s: var string; v: DateTime)" href="rtmp/server/rtmpmonitor.html#dumpHook%2Cstring%2CDateTime">rtmpmonitor: proc dumpHook(s: var string; v: DateTime)</a></li>
+          </ul></dd>
 <dt><a name="encodeAMF0Values" href="#encodeAMF0Values"><span>encodeAMF0Values:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="actionmessage: proc encodeAMF0Values(vals: seq[AMF0Value]): seq[byte]" href="rtmp/server/actionmessage.html#encodeAMF0Values%2Cseq%5BAMF0Value%5D">actionmessage: proc encodeAMF0Values(vals: seq[AMF0Value]): seq[byte]</a></li>
@@ -141,6 +149,10 @@
 <dt><a name="feedBytes" href="#feedBytes"><span>feedBytes:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="chunkstream: proc feedBytes(ctx: ChunkStreamCtx; data: ptr byte; len: int): int" href="rtmp/server/chunkstream.html#feedBytes%2CChunkStreamCtx%2Cptr.byte%2Cint">chunkstream: proc feedBytes(ctx: ChunkStreamCtx; data: ptr byte; len: int): int</a></li>
+          </ul></dd>
+<dt><a name="gMonitor" href="#gMonitor"><span>gMonitor:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpmonitor: var gMonitor" href="rtmp/server/rtmpmonitor.html#gMonitor">rtmpmonitor: var gMonitor</a></li>
           </ul></dd>
 <dt><a name="hsDone" href="#hsDone"><span>hsDone:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -178,6 +190,26 @@
 <li><a class="reference external"
           data-doc-search-tag="rtmpplaylist: proc loadPlaylist(filePath: string): seq[string]" href="rtmp/rtmpplaylist.html#loadPlaylist%2Cstring">rtmpplaylist: proc loadPlaylist(filePath: string): seq[string]</a></li>
           </ul></dd>
+<dt><a name="MAX_SUBSCRIBER_OUTBUF" href="#MAX_SUBSCRIBER_OUTBUF"><span>MAX_SUBSCRIBER_OUTBUF:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpserver: const MAX_SUBSCRIBER_OUTBUF" href="rtmp/rtmpserver.html#MAX_SUBSCRIBER_OUTBUF">rtmpserver: const MAX_SUBSCRIBER_OUTBUF</a></li>
+          </ul></dd>
+<dt><a name="monitorAddStream" href="#monitorAddStream"><span>monitorAddStream:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpserver: proc monitorAddStream(name: string; pubConn: ConnCtx)" href="rtmp/rtmpserver.html#monitorAddStream%2Cstring%2CConnCtx">rtmpserver: proc monitorAddStream(name: string; pubConn: ConnCtx)</a></li>
+          </ul></dd>
+<dt><a name="monitorAddSubscriber" href="#monitorAddSubscriber"><span>monitorAddSubscriber:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpserver: proc monitorAddSubscriber(streamName: string; subConn: ConnCtx)" href="rtmp/rtmpserver.html#monitorAddSubscriber%2Cstring%2CConnCtx">rtmpserver: proc monitorAddSubscriber(streamName: string; subConn: ConnCtx)</a></li>
+          </ul></dd>
+<dt><a name="monitorRemoveStream" href="#monitorRemoveStream"><span>monitorRemoveStream:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpserver: proc monitorRemoveStream(name: string)" href="rtmp/rtmpserver.html#monitorRemoveStream%2Cstring">rtmpserver: proc monitorRemoveStream(name: string)</a></li>
+          </ul></dd>
+<dt><a name="monitorRemoveSubscriber" href="#monitorRemoveSubscriber"><span>monitorRemoveSubscriber:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpserver: proc monitorRemoveSubscriber(streamName: string; subConn: ConnCtx)" href="rtmp/rtmpserver.html#monitorRemoveSubscriber%2Cstring%2CConnCtx">rtmpserver: proc monitorRemoveSubscriber(streamName: string; subConn: ConnCtx)</a></li>
+          </ul></dd>
 <dt><a name="newBoolean" href="#newBoolean"><span>newBoolean:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="actionmessage: proc newBoolean(v: bool): AMF0Value" href="rtmp/server/actionmessage.html#newBoolean%2Cbool">actionmessage: proc newBoolean(v: bool): AMF0Value</a></li>
@@ -201,6 +233,10 @@
 <dt><a name="newRtmpClient" href="#newRtmpClient"><span>newRtmpClient:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpclient: proc newRtmpClient(address: string): RtmpClient" href="rtmp/rtmpclient.html#newRtmpClient%2Cstring">rtmpclient: proc newRtmpClient(address: string): RtmpClient</a></li>
+          </ul></dd>
+<dt><a name="newRTMPServer" href="#newRTMPServer"><span>newRTMPServer:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpserver: proc newRTMPServer(): RtmpServer" href="rtmp/rtmpserver.html#newRTMPServer">rtmpserver: proc newRTMPServer(): RtmpServer</a></li>
           </ul></dd>
 <dt><a name="newStrictArray" href="#newStrictArray"><span>newStrictArray:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -233,6 +269,8 @@
 <dt><a name="RtmpClient" href="#RtmpClient"><span>RtmpClient:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpclient: type RtmpClient" href="rtmp/rtmpclient.html#RtmpClient">rtmpclient: type RtmpClient</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="rtmpmonitor: object RtmpClient" href="rtmp/server/rtmpmonitor.html#RtmpClient">rtmpmonitor: object RtmpClient</a></li>
           </ul></dd>
 <dt><a name="RtmpConnState" href="#RtmpConnState"><span>RtmpConnState:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -254,13 +292,29 @@
 <li><a class="reference external"
           data-doc-search-tag="rtmpserver: const RTMP_MAX_CHUNK_SIZE" href="rtmp/rtmpserver.html#RTMP_MAX_CHUNK_SIZE">rtmpserver: const RTMP_MAX_CHUNK_SIZE</a></li>
           </ul></dd>
+<dt><a name="RtmpMonitor" href="#RtmpMonitor"><span>RtmpMonitor:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpmonitor: type RtmpMonitor" href="rtmp/server/rtmpmonitor.html#RtmpMonitor">rtmpmonitor: type RtmpMonitor</a></li>
+          </ul></dd>
+<dt><a name="RtmpPublisher" href="#RtmpPublisher"><span>RtmpPublisher:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpmonitor: object RtmpPublisher" href="rtmp/server/rtmpmonitor.html#RtmpPublisher">rtmpmonitor: object RtmpPublisher</a></li>
+          </ul></dd>
+<dt><a name="RtmpServer" href="#RtmpServer"><span>RtmpServer:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpserver: type RtmpServer" href="rtmp/rtmpserver.html#RtmpServer">rtmpserver: type RtmpServer</a></li>
+          </ul></dd>
 <dt><a name="RTMPServerError" href="#RTMPServerError"><span>RTMPServerError:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpserver: object RTMPServerError" href="rtmp/rtmpserver.html#RTMPServerError">rtmpserver: object RTMPServerError</a></li>
           </ul></dd>
-<dt><a name="ServerCtx" href="#ServerCtx"><span>ServerCtx:</span></a></dt><dd><ul class="simple">
+<dt><a name="RtmpStream" href="#RtmpStream"><span>RtmpStream:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rtmpserver: type ServerCtx" href="rtmp/rtmpserver.html#ServerCtx">rtmpserver: type ServerCtx</a></li>
+          data-doc-search-tag="rtmpmonitor: object RtmpStream" href="rtmp/server/rtmpmonitor.html#RtmpStream">rtmpmonitor: object RtmpStream</a></li>
+          </ul></dd>
+<dt><a name="RtmpSubscriber" href="#RtmpSubscriber"><span>RtmpSubscriber:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpmonitor: object RtmpSubscriber" href="rtmp/server/rtmpmonitor.html#RtmpSubscriber">rtmpmonitor: object RtmpSubscriber</a></li>
           </ul></dd>
 <dt><a name="setOnMessage" href="#setOnMessage"><span>setOnMessage:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -276,7 +330,7 @@
           </ul></dd>
 <dt><a name="startServer" href="#startServer"><span>startServer:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rtmpserver: proc startServer(port: int = DEFAULT_RTMP_PORT)" href="rtmp/rtmpserver.html#startServer%2Cint">rtmpserver: proc startServer(port: int = DEFAULT_RTMP_PORT)</a></li>
+          data-doc-search-tag="rtmpserver: proc startServer(server: RtmpServer; port: Port = Port(DEFAULT_RTMP_PORT))" href="rtmp/rtmpserver.html#startServer%2CRtmpServer%2CPort">rtmpserver: proc startServer(server: RtmpServer; port: Port = Port(DEFAULT_RTMP_PORT))</a></li>
           </ul></dd>
 <dt><a name="startStreamAacAdtsZeroCopy" href="#startStreamAacAdtsZeroCopy"><span>startStreamAacAdtsZeroCopy:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -354,7 +408,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-24 22:28:28 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-25 14:06:25 UTC</small>
       </div>
     </div>
   </div>

@@ -1,15 +1,21 @@
 nimTitle	rtmpserver	rtmp/rtmpserver.html	module rtmp/rtmpserver		0
-nim	DEFAULT_RTMP_PORT	rtmp/rtmpserver.html#DEFAULT_RTMP_PORT	const DEFAULT_RTMP_PORT		21
-nim	RTMP_HANDSHAKE_SIZE	rtmp/rtmpserver.html#RTMP_HANDSHAKE_SIZE	const RTMP_HANDSHAKE_SIZE		22
-nim	HS_INIT	rtmp/rtmpserver.html#HS_INIT	const HS_INIT		26
-nim	HS_S0S1_SENT	rtmp/rtmpserver.html#HS_S0S1_SENT	const HS_S0S1_SENT		28
-nim	HS_DONE	rtmp/rtmpserver.html#HS_DONE	const HS_DONE		30
-nim	RTMP_DEFAULT_CHUNK_SIZE	rtmp/rtmpserver.html#RTMP_DEFAULT_CHUNK_SIZE	const RTMP_DEFAULT_CHUNK_SIZE		33
-nim	RTMP_MAX_CHUNK_SIZE	rtmp/rtmpserver.html#RTMP_MAX_CHUNK_SIZE	const RTMP_MAX_CHUNK_SIZE		35
-nim	ServerCtx	rtmp/rtmpserver.html#ServerCtx	type ServerCtx		39
-nim	RtmpConnState	rtmp/rtmpserver.html#RtmpConnState	object RtmpConnState		46
-nim	RTMPServerError	rtmp/rtmpserver.html#RTMPServerError	object RTMPServerError		63
-nim	ConnCtx	rtmp/rtmpserver.html#ConnCtx	type ConnCtx		65
-nim	SubscriberEntry	rtmp/rtmpserver.html#SubscriberEntry	object SubscriberEntry		133
-nim	StreamEntry	rtmp/rtmpserver.html#StreamEntry	type StreamEntry		142
-nim	startServer	rtmp/rtmpserver.html#startServer,int	proc startServer(port: int = DEFAULT_RTMP_PORT)		846
+nim	DEFAULT_RTMP_PORT	rtmp/rtmpserver.html#DEFAULT_RTMP_PORT	const DEFAULT_RTMP_PORT		24
+nim	RTMP_HANDSHAKE_SIZE	rtmp/rtmpserver.html#RTMP_HANDSHAKE_SIZE	const RTMP_HANDSHAKE_SIZE		26
+nim	MAX_SUBSCRIBER_OUTBUF	rtmp/rtmpserver.html#MAX_SUBSCRIBER_OUTBUF	const MAX_SUBSCRIBER_OUTBUF		28
+nim	HS_INIT	rtmp/rtmpserver.html#HS_INIT	const HS_INIT		39
+nim	HS_S0S1_SENT	rtmp/rtmpserver.html#HS_S0S1_SENT	const HS_S0S1_SENT		41
+nim	HS_DONE	rtmp/rtmpserver.html#HS_DONE	const HS_DONE		43
+nim	RTMP_DEFAULT_CHUNK_SIZE	rtmp/rtmpserver.html#RTMP_DEFAULT_CHUNK_SIZE	const RTMP_DEFAULT_CHUNK_SIZE		46
+nim	RTMP_MAX_CHUNK_SIZE	rtmp/rtmpserver.html#RTMP_MAX_CHUNK_SIZE	const RTMP_MAX_CHUNK_SIZE		48
+nim	RtmpConnState	rtmp/rtmpserver.html#RtmpConnState	object RtmpConnState		63
+nim	RtmpServer	rtmp/rtmpserver.html#RtmpServer	type RtmpServer		80
+nim	RTMPServerError	rtmp/rtmpserver.html#RTMPServerError	object RTMPServerError		91
+nim	ConnCtx	rtmp/rtmpserver.html#ConnCtx	type ConnCtx		93
+nim	monitorAddStream	rtmp/rtmpserver.html#monitorAddStream,string,ConnCtx	proc monitorAddStream(name: string; pubConn: ConnCtx)		202
+nim	monitorRemoveStream	rtmp/rtmpserver.html#monitorRemoveStream,string	proc monitorRemoveStream(name: string)		212
+nim	monitorAddSubscriber	rtmp/rtmpserver.html#monitorAddSubscriber,string,ConnCtx	proc monitorAddSubscriber(streamName: string; subConn: ConnCtx)		215
+nim	monitorRemoveSubscriber	rtmp/rtmpserver.html#monitorRemoveSubscriber,string,ConnCtx	proc monitorRemoveSubscriber(streamName: string; subConn: ConnCtx)		222
+nim	SubscriberEntry	rtmp/rtmpserver.html#SubscriberEntry	object SubscriberEntry		235
+nim	StreamEntry	rtmp/rtmpserver.html#StreamEntry	type StreamEntry		244
+nim	newRTMPServer	rtmp/rtmpserver.html#newRTMPServer	proc newRTMPServer(): RtmpServer		1116
+nim	startServer	rtmp/rtmpserver.html#startServer,RtmpServer,Port	proc startServer(server: RtmpServer; port: Port = Port(DEFAULT_RTMP_PORT))		1125
