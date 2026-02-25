@@ -8,14 +8,15 @@ nim	HS_DONE	rtmp/rtmpserver.html#HS_DONE	const HS_DONE		43
 nim	RTMP_DEFAULT_CHUNK_SIZE	rtmp/rtmpserver.html#RTMP_DEFAULT_CHUNK_SIZE	const RTMP_DEFAULT_CHUNK_SIZE		46
 nim	RTMP_MAX_CHUNK_SIZE	rtmp/rtmpserver.html#RTMP_MAX_CHUNK_SIZE	const RTMP_MAX_CHUNK_SIZE		48
 nim	RtmpConnState	rtmp/rtmpserver.html#RtmpConnState	object RtmpConnState		63
-nim	RtmpServer	rtmp/rtmpserver.html#RtmpServer	type RtmpServer		80
-nim	RTMPServerError	rtmp/rtmpserver.html#RTMPServerError	object RTMPServerError		91
-nim	ConnCtx	rtmp/rtmpserver.html#ConnCtx	type ConnCtx		93
-nim	monitorAddStream	rtmp/rtmpserver.html#monitorAddStream,string,ConnCtx	proc monitorAddStream(name: string; pubConn: ConnCtx)		202
-nim	monitorRemoveStream	rtmp/rtmpserver.html#monitorRemoveStream,string	proc monitorRemoveStream(name: string)		212
-nim	monitorAddSubscriber	rtmp/rtmpserver.html#monitorAddSubscriber,string,ConnCtx	proc monitorAddSubscriber(streamName: string; subConn: ConnCtx)		215
-nim	monitorRemoveSubscriber	rtmp/rtmpserver.html#monitorRemoveSubscriber,string,ConnCtx	proc monitorRemoveSubscriber(streamName: string; subConn: ConnCtx)		222
-nim	SubscriberEntry	rtmp/rtmpserver.html#SubscriberEntry	object SubscriberEntry		235
-nim	StreamEntry	rtmp/rtmpserver.html#StreamEntry	type StreamEntry		244
-nim	newRTMPServer	rtmp/rtmpserver.html#newRTMPServer	proc newRTMPServer(): RtmpServer		1116
-nim	startServer	rtmp/rtmpserver.html#startServer,RtmpServer,Port	proc startServer(server: RtmpServer; port: Port = Port(DEFAULT_RTMP_PORT))		1125
+nim	RtmpServerSettings	rtmp/rtmpserver.html#RtmpServerSettings	object RtmpServerSettings		80
+nim	RtmpServer	rtmp/rtmpserver.html#RtmpServer	type RtmpServer		89
+nim	RTMPServerError	rtmp/rtmpserver.html#RTMPServerError	object RTMPServerError		102
+nim	ConnCtx	rtmp/rtmpserver.html#ConnCtx	type ConnCtx		104
+nim	monitorAddStream	rtmp/rtmpserver.html#monitorAddStream,string,ConnCtx	proc monitorAddStream(name: string; pubConn: ConnCtx)		213
+nim	monitorRemoveStream	rtmp/rtmpserver.html#monitorRemoveStream,string	proc monitorRemoveStream(name: string)		223
+nim	monitorAddSubscriber	rtmp/rtmpserver.html#monitorAddSubscriber,string,ConnCtx	proc monitorAddSubscriber(streamName: string; subConn: ConnCtx)		226
+nim	monitorRemoveSubscriber	rtmp/rtmpserver.html#monitorRemoveSubscriber,string,ConnCtx	proc monitorRemoveSubscriber(streamName: string; subConn: ConnCtx)		233
+nim	SubscriberEntry	rtmp/rtmpserver.html#SubscriberEntry	object SubscriberEntry		246
+nim	StreamEntry	rtmp/rtmpserver.html#StreamEntry	type StreamEntry		255
+nim	newRTMPServer	rtmp/rtmpserver.html#newRTMPServer,RtmpServerSettings	proc newRTMPServer(settings: RtmpServerSettings = RtmpServerSettings()): RtmpServer		1127
+nim	startServer	rtmp/rtmpserver.html#startServer,RtmpServer	proc startServer(server: RtmpServer)		1139

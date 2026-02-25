@@ -98,6 +98,10 @@
   restApiListener*: ptr evconnlistener ## Listener used by the REST API HTTP server
   restApiHttp*: ptr evhttp   ## Libevent HTTP server handle for REST API">RtmpServer</a></li>
 <li><a class="reference" href="#RTMPServerError" title="RTMPServerError = object of CatchableError">RTMPServerError</a></li>
+<li><a class="reference" href="#RtmpServerSettings" title="RtmpServerSettings = object
+  enableRestApi*: bool = true ## Whether to enable the REST API for stream management (default: true)
+  restApiPort*: Port = 4000'u ## Port for the REST API listener (default: 4000)
+  rtmpPort*: Port = 1935'u   ## Port for the RTMP server to listen on (default: 1935)">RtmpServerSettings</a></li>
 <li><a class="reference" href="#StreamEntry" title="StreamEntry = ref object
   name*: string              ## Name of the stream (e.g., &quot;live/streamKey&quot;)
   publisher*: ConnCtx        ## Connection that is publishing this stream (if any)
@@ -154,11 +158,11 @@
 
 </ul>
 <ul class="simple nested-toc-section">newRTMPServer
-  <li><a class="reference" href="#newRTMPServer" title="newRTMPServer(): RtmpServer">newRTMPServer(): RtmpServer</a></li>
+  <li><a class="reference" href="#newRTMPServer%2CRtmpServerSettings" title="newRTMPServer(settings: RtmpServerSettings = RtmpServerSettings()): RtmpServer">newRTMPServer(settings: RtmpServerSettings = RtmpServerSettings()): RtmpServer</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">startServer
-  <li><a class="reference" href="#startServer%2CRtmpServer%2CPort" title="startServer(server: RtmpServer; port: Port = Port(DEFAULT_RTMP_PORT))">startServer(server: RtmpServer; port: Port = Port(DEFAULT_RTMP_PORT))</a></li>
+  <li><a class="reference" href="#startServer%2CRtmpServer" title="startServer(server: RtmpServer)">startServer(server: RtmpServer)</a></li>
 
 </ul>
 
@@ -247,6 +251,17 @@
 </div>
 <div id="RTMPServerError">
   <dt><pre><a href="rtmpserver.html#RTMPServerError"><span class="Identifier">RTMPServerError</span></a> <span class="Other">=</span> <span class="Keyword">object</span> <span class="Keyword">of</span> <span class="Identifier">CatchableError</span></pre></dt>
+  <dd>
+    
+    
+    
+  </dd>
+</div>
+<div id="RtmpServerSettings">
+  <dt><pre><a href="rtmpserver.html#RtmpServerSettings"><span class="Identifier">RtmpServerSettings</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">enableRestApi</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span> <span class="Other">=</span> <span class="DecNumber">true</span> <span class="Comment">## Whether to enable the REST API for stream management (default: true)</span>
+  <span class="Identifier">restApiPort</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Port</span> <span class="Other">=</span> <span class="DecNumber">4000'u</span> <span class="Comment">## Port for the REST API listener (default: 4000)</span>
+  <span class="Identifier">rtmpPort</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Port</span> <span class="Other">=</span> <span class="DecNumber">1935'u</span>   <span class="Comment">## Port for the RTMP server to listen on (default: 1935)</span></pre></dt>
   <dd>
     
     
@@ -406,24 +421,26 @@
 
 </div>
 <div id="newRTMPServer-procs-all">
-  <div id="newRTMPServer">
-  <dt><pre><span class="Keyword">proc</span> <a href="#newRTMPServer"><span class="Identifier">newRTMPServer</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="rtmpserver.html#RtmpServer"><span class="Identifier">RtmpServer</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RTMPServerError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
-                                   <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <div id="newRTMPServer,RtmpServerSettings">
+  <dt><pre><span class="Keyword">proc</span> <a href="#newRTMPServer%2CRtmpServerSettings"><span class="Identifier">newRTMPServer</span></a><span class="Other">(</span><span class="Identifier">settings</span><span class="Other">:</span> <a href="rtmpserver.html#RtmpServerSettings"><span class="Identifier">RtmpServerSettings</span></a> <span class="Other">=</span> <a href="rtmpserver.html#RtmpServerSettings"><span class="Identifier">RtmpServerSettings</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">)</span><span class="Other">:</span> <a href="rtmpserver.html#RtmpServer"><span class="Identifier">RtmpServer</span></a> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RTMPServerError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    
+    Creates a new RTMP server instance with the specified settings. This initializes the event base and binds the REST API listener if enabled.
     
   </dd>
 </div>
 
 </div>
 <div id="startServer-procs-all">
-  <div id="startServer,RtmpServer,Port">
-  <dt><pre><span class="Keyword">proc</span> <a href="#startServer%2CRtmpServer%2CPort"><span class="Identifier">startServer</span></a><span class="Other">(</span><span class="Identifier">server</span><span class="Other">:</span> <a href="rtmpserver.html#RtmpServer"><span class="Identifier">RtmpServer</span></a><span class="Other">;</span> <span class="Identifier">port</span><span class="Other">:</span> <span class="Identifier">Port</span> <span class="Other">=</span> <span class="Identifier">Port</span><span class="Other">(</span><span class="Identifier">DEFAULT_RTMP_PORT</span><span class="Other">)</span><span class="Other">)</span> {.
-    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RTMPServerError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <div id="startServer,RtmpServer">
+  <dt><pre><span class="Keyword">proc</span> <a href="#startServer%2CRtmpServer"><span class="Identifier">startServer</span></a><span class="Other">(</span><span class="Identifier">server</span><span class="Other">:</span> <a href="rtmpserver.html#RtmpServer"><span class="Identifier">RtmpServer</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RTMPServerError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+                                       <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    Start RTMP server on specified port (default 1935) This is a blocking call that runs the event loop; it will not return until the server is stopped.
+    <p>Start RTMP server on specified port (default 1935)</p>
+<p>This is a blocking call that runs the event loop; it will not return until the server is stopped.</p>
+
     
   </dd>
 </div>
@@ -439,7 +456,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-25 14:07:56 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-25 14:17:33 UTC</small>
       </div>
     </div>
   </div>
