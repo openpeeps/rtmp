@@ -213,11 +213,11 @@ proc newSharedPayload(payloadPtr: pointer, payloadLen: int): SharedPayload =
 
 proc monitorAddStream*(name: string, pubConn: ConnCtx) =
   ## Add a new stream to the monitor with the given name and publisher connection
-  var pub = RtmpPublisher(id: $pubConn.connId, ip: pubConn.clientIp)
+  var pub = RtmpPublisher(id: $pubConn.connId, ip: pubConn.clientIp, published_at: toUnix(toTime(now())))
   let stream = RtmpStream(
     id: name,
     publisher: pub,
-    created_at: now()
+    created_at: toUnix(toTime(now()))
   )
   gMonitor.streams[name] = stream
 
@@ -228,7 +228,7 @@ proc monitorAddSubscriber*(streamName: string, subConn: ConnCtx) =
   ## Add a subscriber to the monitor's stream entry for the given
   ## stream name and subscriber connection
   if gMonitor.streams.hasKey(streamName):
-    let sub = RtmpSubscriber(id: $subConn.connId, ip: subConn.clientIp)
+    let sub = RtmpSubscriber(id: $subConn.connId, ip: subConn.clientIp, subscribed_at: toUnix(toTime(now())))
     gMonitor.streams[streamName].subscribers.add(sub)
 
 proc monitorRemoveSubscriber*(streamName: string, subConn: ConnCtx) =

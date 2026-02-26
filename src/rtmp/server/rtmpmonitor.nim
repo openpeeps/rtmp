@@ -4,9 +4,8 @@
 #          Made by Humans from OpenPeeps
 #          https://github.com/openpeeps/rtmp
 
-import std/[httpcore, tables, times]
+import std/[httpcore, tables, times, json, jsonutils]
 import pkg/libevent/bindings/[event, bufferevent, buffer, http, listener]
-import pkg/jsony
 
 ## This module implements a simple RTMP server monitor
 ## that listens for incoming RTMP connections and provides a
@@ -22,9 +21,13 @@ type
 
   RtmpSubscriber* = object of RtmpClient
     ## Represents a connected RTMP subscriber (stream consumer)
+    subscribed_at*: int64
+      ## Timestamp of when the subscriber started receiving the stream (Unix time in seconds)
   
   RtmpPublisher* = object of RtmpClient
     ## Represents a connected RTMP publisher (stream source)
+    published_at*: int64
+      ## Timestamp of when the publisher started streaming (Unix time in seconds)
 
   RtmpStream* = object
     id*: string
@@ -33,8 +36,8 @@ type
       ## The publisher client that is sending the stream data
     subscribers*: seq[RtmpSubscriber]
       ## List of subscriber clients that are receiving the stream data
-    created_at*: DateTime
-      ## Timestamp of when the stream was created (first publisher connection)
+    created_at*: int64
+      ## Timestamp of when the stream was created (Unix time in seconds)
       
   RtmpMonitor* = ref object
     streams*: Table[string, RtmpStream]
@@ -44,10 +47,6 @@ type
 var gMonitor*: RtmpMonitor = RtmpMonitor()
   ## Global instance of the RTMP monitor that tracks all
   ## active streams and clients
-
-proc dumpHook*(s: var string, v: DateTime) =
-  ## Convert `DateTime` to JSONY string
-  add s, $(toUnix(toTime(v)))
 
 proc evbufAddString(buf: ptr Evbuffer; s: string) =
   if buf == nil or s.len == 0: return
@@ -76,7 +75,7 @@ proc apiRequestCb*(req: ptr evhttp_request; arg: pointer) {.cdecl.} =
     reason = "Not Found"
     body = """{"ok":false,"error":"not_found"}"""
   else:
-    body = toJson(gMonitor)
+    body = $(gMonitor.toJson())
     
 
   let output = evhttp_request_get_output_buffer(req)
