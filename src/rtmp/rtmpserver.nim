@@ -738,7 +738,7 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
   if msgTypeId == 2 and payloadLen >= 4 and payloadPtr != nil:
     let b = cast[ptr UncheckedArray[byte]](payloadPtr)
     let abortCsid = (int(b[0]) shl 24) or (int(b[1]) shl 16) or (int(b[2]) shl 8) or int(b[3])
-    echo "Client Abort for CSID: ", abortCsid
+    # echo "Client Abort for CSID: ", abortCsid
     # remove any per-chunkstream state
     if c.chunkCtx != nil:
       c.chunkCtx.streams.del(abortCsid)
@@ -769,7 +769,7 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
     try:
       vals = decodeAllAMF0Ptr(amfPtr, amfLen)
     except:
-      echo "AMF0 decode error payloadLen=", amfLen
+      # echo "AMF0 decode error payloadLen=", amfLen
       # show a small hex snippet to aid debugging
       let maxDump = if amfLen < 64: amfLen else: 64
       let bptr = cast[ptr UncheckedArray[byte]](amfPtr)
@@ -810,7 +810,7 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
       let isSubscribedNow = c.subscriptions.hasKey(streamName) and c.subscriptions[streamName] == sid
       if wantsPause:
         if isSubscribedNow:
-          echo "Pausing subscription to stream '", streamName, "' for connId=", $c.connId
+          # echo "Pausing subscription to stream '", streamName, "' for connId=", $c.connId
           pauseSubscriber(streamName, c)
           c.pausedSubscriber = true
           drainOutputQueue(c)
@@ -1155,7 +1155,7 @@ proc bev_read_cb(bev: ptr bufferevent, ctx: pointer) {.cdecl.} =
       let c0 = pbytes[0]
       # Expect RTMP version 3 (0x03) in C0; reject otherwise
       if c0 != 0x03'u8:
-        echo "Unsupported RTMP version: ", c0
+        # echo "Unsupported RTMP version: ", c0
         # Close connection
         if bev != nil:
           bufferevent_free(bev)

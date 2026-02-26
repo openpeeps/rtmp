@@ -38,7 +38,7 @@ type
       ## List of subscriber clients that are receiving the stream data
     created_at*: int64
       ## Timestamp of when the stream was created (Unix time in seconds)
-      
+
   RtmpMonitor* = ref object
     streams*: Table[string, RtmpStream]
       ## A table mapping stream IDs to their corresponding
