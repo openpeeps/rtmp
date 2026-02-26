@@ -1,5 +1,12 @@
 import pkg/rtmp
 
+# This is a simple example of how to create an RTMP streaming client
+# using the `rtmp` package.
+#
+# The client will connect to an RTMP server and stream video and audio
+# files in a loop. You can customize the client settings and streaming logic as needed.
+# For more details, check the documentation https://openpeeps.github.io/rtmp/rtmp/rtmpclient.html
+
 let
   rtmpClient = newRtmpClient("rtmp://127.0.0.1/live/livestream")
   flvVideoPath = "./data/8721923-sd_426_226_25fps.flv"
@@ -15,6 +22,10 @@ proc startStreaming(c: RtmpClient, ps: PlaylistState) =
   startStreamAacAdtsZeroCopy(c, aacAudioPath, c.msgStreamId, 4'u8, startTs = c.ps.globalTs)
 
 rtmpClient.ps = PlaylistState()
+# this is hardcoded playlist state and should not be part
+# of the rtmp client, lol. todo remove this and use a generic
+# type for client state.
+
 rtmpClient.onPublishOk =
   proc(c: RtmpClient) =
     # This callback is called when the client successfully connects

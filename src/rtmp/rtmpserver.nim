@@ -826,7 +826,6 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
           sendAmfCommand(c, sid, @[ newString("onStatus"), kAmfNum0, kAmfNull, info ])
       else:
         # Always re-subscribe on unpause (restart stream from beginning)
-        echo "Unpausing subscription to stream '", streamName, "' for connId=", $c.connId
         drainOutputQueue(c)
         let se = gStreams.getOrDefault(streamName, nil)
         if se != nil and se.publisher != nil:
@@ -1063,7 +1062,7 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
           s.conn.recoveringUntilMs = 0
 
         if not sendRtmpMessageShared(s.conn, 4, msgTypeId, s.msgStreamId, shared, int(timestamp)):
-          echo "Failed to send message to subscriber ", s.conn.connId, "; dropping subscriber"
+          # echo "Failed to send message to subscriber ", s.conn.connId, "; dropping subscriber"
           removeSubscriber(name, s.conn)
           dropSubs.add(s)
           continue
@@ -1189,8 +1188,7 @@ proc bev_read_cb(bev: ptr bufferevent, ctx: pointer) {.cdecl.} =
           if conn.serverS1[i] != c2bytes[i]:
             match = false
             break
-        if not match:
-          echo "Warning: C2 did not match server S1 (handshake mismatch)"
+        # if not match: echo "Warning: C2 did not match server S1 (handshake mismatch)"
 
       assert evbuffer_drain(inbuf, csize_t(RTMP_HANDSHAKE_SIZE)) == 0
       conn.hsState = HS_DONE
