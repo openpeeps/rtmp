@@ -14,9 +14,8 @@
 import std/[posix, times, strutils, tables, sequtils]
 import pkg/libevent/bindings/[event, bufferevent, buffer, http, listener]
 
-import ./server/actionmessage
-import ./server/chunkstream
-import ./server/rtmpmonitor
+import ./server/[actionmessage, chunkstream, rtmpmonitor]
+import ./private/memutils
 
 from std/net import Port, `$`
 
@@ -25,14 +24,11 @@ const
     ## Default port for RTMP servers to listen on
   RTMP_HANDSHAKE_SIZE* = 1536
     ## RTMP handshake S1/S2 size in bytes
-  MAX_SUBSCRIBER_OUTBUF* = 8 * 1024 * 1024
+  MAX_SUBSCRIBER_OUTBUF* = 3 * (1024 * 1024) # 3MB
     ## todo allow for configurable limits and better
     ## backpressure handling
   SLOW_SUBSCRIBER_RESUME_OUTBUF = MAX_SUBSCRIBER_OUTBUF div 2
-    ## When a subscriber is marked as slow due to exceeding the outbuf limit,
     ## we can resume sending to them once their outbuf drops below this threshold
-  LIVE_JUMP_COOLDOWN_MS = 1500'i64
-    ## Prevent repeated jump-to-live in very short intervals
 
 # RTMP state / types
 const
@@ -42,7 +38,6 @@ const
     ## Handshake state after sending S0 and S1, waiting for S0S1S2 from client
   HS_DONE* = 2
     ## Handshake complete, ready for RTMP messages
-
   RTMP_DEFAULT_CHUNK_SIZE* = 128
     ## Default RTMP chunk size before any SetChunkSize messages are processed
   RTMP_MAX_CHUNK_SIZE* = 65536
@@ -142,16 +137,22 @@ type
       ## Stream ID assigned to the published stream (if any)
     subscriptions*: Table[string, int]
       ## Map of stream name to stream ID for all streams this connection is subscribed to
+    streamNameById*: Table[int, string]
+      ## Map of stream ID to stream name for reverse lookup when sending messages
     slowSubscriber*: bool
       ## true when subscriber output queue exceeded MAX_SUBSCRIBER_OUTBUF
+    pausedSubscriber*: bool
+      ## true when subscriber is paused (not receiving messages) due to slowSubscriber or manual pause
     waitForKeyframe*: bool
       ## when recovering from lag, drop media until next video keyframe
     lastLiveJumpMs*: int64
       ## Last time this subscriber was force-jumped to live
+    recoveringUntilMs*: int64
+      ## If recovering from lag, ignore media until this timestamp to allow jump-to-live recovery
 
 proc sendAmfCommand(conn: ConnCtx; msgStreamId: int; vals: seq[AMF0Value])
-proc sendRtmpMessage(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int; payload: seq[byte]; timestamp: int = 0): bool
-proc sendRtmpMessageShared(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int; sp: SharedPayload; timestamp: int = 0): bool
+proc sendRtmpMessage(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int; payload: seq[byte]; timestamp: int = 0): bool {.discardable.}
+proc sendRtmpMessageShared(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int; sp: SharedPayload; timestamp: int = 0): bool {.discardable.}
 proc removeSubscriber(name: string, conn: ConnCtx)
 proc connSummary(conn: ConnCtx): string
 
@@ -314,11 +315,19 @@ let
 
 var gStreams = initTable[string, StreamEntry]()
 
+proc drainOutputQueue(conn: ConnCtx) =
+  if conn == nil or conn.bev == nil: return
+  let output = bufferevent_get_output(conn.bev)
+  if output == nil: return
+  let q = evbuffer_get_length(output)
+  if q > 0:
+    discard evbuffer_drain(output, q)
+
 proc addPublisher(name: string, conn: ConnCtx, pubStreamId: int) =
   if name.len == 0 or conn == nil: return
   var se = gStreams.getOrDefault(name, nil)
   if se == nil:
-    se = StreamEntry(name: name, publisher: conn, publisherStreamId: pubStreamId, subscribers: @[], metaPayload: @[], videoSeqPayload: @[], audioSeqPayload: @[])
+    se = StreamEntry(name: name, publisher: conn, publisherStreamId: pubStreamId)
     gStreams[name] = se
   else:
     se.publisher = conn
@@ -334,37 +343,52 @@ proc addPublisher(name: string, conn: ConnCtx, pubStreamId: int) =
   se.videoSeqPayload.setLen(0)
   se.audioSeqPayload.setLen(0)
 
-proc addSubscriber(name: string, conn: ConnCtx, subStreamId: int) =
+proc addSubscriber(name: string, conn: ConnCtx, subStreamId: int, skipInitSend: bool = false) =
   if name.len == 0 or conn == nil: return
+  # avoid duplicate subscription entries
+  if conn.subscriptions.hasKey(name) and conn.subscriptions[name] == subStreamId:
+    return
+
   var se = gStreams.getOrDefault(name, nil)
   if se == nil:
-    se = StreamEntry(name: name, publisher: nil, publisherStreamId: 0, subscribers: @[], metaPayload: @[], videoSeqPayload: @[], audioSeqPayload: @[])
+    se = StreamEntry(name: name)
     gStreams[name] = se
-    # new stream entry created
+
+  # avoid duplicate subscriber entries in stream
+  for s in se.subscribers:
+    if s.conn == conn and s.msgStreamId == subStreamId:
+      conn.subscriptions[name] = subStreamId
+      conn.streamNameById[subStreamId] = name
+      return
+
   se.subscribers.add(SubscriberEntry(conn: conn, msgStreamId: subStreamId))
   conn.subscriptions[name] = subStreamId
+  conn.streamNameById[subStreamId] = name
+
   # send cached meta and sequence headers (if any)
   # so the new subscriber can initialize decoders
-  if se.metaPayload.len > 0:
-    # if sending fails (for example, due to a slow subscriber), we should remove this
-    # subscriber to avoid keeping bad connections around
-    if not sendRtmpMessage(conn, csid = 4, msgTypeId = 18, msgStreamId = subStreamId, payload = se.metaPayload):
-      removeSubscriber(name, conn)
-      return
-  if se.videoSeqPayload.len > 0:
-    if not sendRtmpMessage(conn, csid = 4, msgTypeId = 9, msgStreamId = subStreamId, payload = se.videoSeqPayload):
-      removeSubscriber(name, conn)
-      return
-  if se.audioSeqPayload.len > 0:
-    if not sendRtmpMessage(conn, csid = 4, msgTypeId = 8, msgStreamId = subStreamId, payload = se.audioSeqPayload):
-      removeSubscriber(name, conn)
-      return
+  if not skipInitSend:
+    if se.metaPayload.len > 0:
+      if not sendRtmpMessage(conn, csid = 4, msgTypeId = 18, msgStreamId = subStreamId, payload = se.metaPayload):
+        removeSubscriber(name, conn)
+        return
+    if se.videoSeqPayload.len > 0:
+      if not sendRtmpMessage(conn, csid = 4, msgTypeId = 9, msgStreamId = subStreamId, payload = se.videoSeqPayload):
+        removeSubscriber(name, conn)
+        return
+    if se.audioSeqPayload.len > 0:
+      if not sendRtmpMessage(conn, csid = 4, msgTypeId = 8, msgStreamId = subStreamId, payload = se.audioSeqPayload):
+        removeSubscriber(name, conn)
+        return
   monitorAddSubscriber(name, conn)
 
 proc removeSubscriber(name: string, conn: ConnCtx) =
   if name.len == 0 or conn == nil: return
   let se = gStreams.getOrDefault(name, nil)
-  if se == nil: return
+  if se == nil: return # no stream entry, nothing to remove
+  
+  let sid = conn.subscriptions.getOrDefault(name, 0)
+
   var o: seq[SubscriberEntry] = @[]
   for s in se.subscribers:
     if s.conn != conn:
@@ -375,8 +399,37 @@ proc removeSubscriber(name: string, conn: ConnCtx) =
   if conn.subscriptions.hasKey(name):
     conn.subscriptions.del(name)
 
+  if sid != 0 and conn.streamNameById.hasKey(sid):
+    if conn.streamNameById[sid] == name:
+      conn.streamNameById.del(sid)
+
   # prune empty placeholder streams (no publisher + no subscribers)
   if se.publisher == nil and se.subscribers.len == 0 and gStreams.hasKey(name):
+    gStreams.del(name)
+  monitorRemoveSubscriber(name, conn)
+  releaseUnusedMemory()
+
+proc pauseSubscriber(name: string, conn: ConnCtx) =
+  if name.len == 0 or conn == nil: return
+  let se = gStreams.getOrDefault(name, nil)
+  if se == nil: return # no stream entry, nothing to pause
+  
+  # Remove this subscriber entry from the stream's list so re-subscribe is clean.
+  var kept: seq[SubscriberEntry] = @[]
+  for s in se.subscribers:
+    if s.conn != conn:
+      kept.add(s)
+  se.subscribers = kept
+
+  # mark subscriber as paused/slow so fanout skips it
+  conn.slowSubscriber = true
+  conn.pausedSubscriber = true
+
+  if conn.subscriptions.hasKey(name):
+    # also remove from conn's subscription table
+    conn.subscriptions.del(name)
+  if se.publisher == nil and se.subscribers.len == 0 and gStreams.hasKey(name):
+    # prune empty placeholder streams (no publisher + no subscribers)
     gStreams.del(name)
   monitorRemoveSubscriber(name, conn)
 
@@ -391,6 +444,7 @@ proc removePublisher(name: string) =
         sendAmfCommand(s.conn, s.msgStreamId, @[ kAmfCmdOnStatus, kAmfNum0, kAmfNull, kInfoPlayStop ])
     monitorRemoveStream(name)
     gStreams.del(name)
+  releaseUnusedMemory()
 
 proc cleanupConn(conn: ConnCtx) =
   if conn == nil: return
@@ -420,6 +474,8 @@ proc removeSubscriptionsByStreamId(conn: ConnCtx; streamId: int) =
     removeSubscriber(name, conn)
     if conn.subscriptions.hasKey(name):
       conn.subscriptions.del(name)
+  if conn.streamNameById.hasKey(streamId):
+    conn.streamNameById.del(streamId)
 
 proc connSummary(conn: ConnCtx): string =
   if conn == nil: return "conn=nil"
@@ -441,9 +497,6 @@ proc bev_event_cb(bev: ptr bufferevent, what: cshort, ctx: pointer) {.cdecl.} =
   if cbarg != nil and gConnKeepAlive.hasKey(cbarg):
     let conn = gConnKeepAlive[cbarg]
     # echo "  ", connSummary(conn), " hsState=", conn.hsState, " closed=", conn.closed
-
-  # if (what and BEV_EVENT_CONNECTED) != 0:
-    # echo "Connection established"
 
   let
     isEof = (what and BEV_EVENT_EOF) != 0
@@ -524,6 +577,8 @@ proc sendRtmpMessageShared(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId
   var cont: byte = byte((3 shl 6) or (csid and 0x3F))
 
   while off < payloadLen:
+    # Add a chunk of the payload as a reference to avoid copying; if the
+    # payload is larger than the chunk size, we add continuation headers and more references as needed
     let take = min(chunkSize, payloadLen - off)
     if take > 0:
       sharedRetain(sp)
@@ -547,14 +602,10 @@ proc sendRtmpMessageShared(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId
 
 proc sendRtmpMessage(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int; payload: seq[byte]; timestamp: int = 0): bool =
   # Use zero-copy for cached payloads (AMF/meta/seq headers)
-  if payload.len > 0 and (msgTypeId == 18 or msgTypeId == 9 or msgTypeId == 8 or msgTypeId == 20):
-    # Wrap in persistent SharedPayload for safe reference
-    let sp = SharedPayload(refs: 0, bytes: payload)
-    return sendRtmpMessageShared(conn, csid, msgTypeId, msgStreamId, sp, timestamp)
-  # Fallback: old method for small/one-off messages
   if conn == nil or conn.bev == nil: return false
   if csid <= 1 or csid >= 64:
-    raise newException(RTMPServerError, "Only CSID 2..63 supported in this minimal sender")
+    raise newException(RTMPServerError,
+        "Only CSID 2..63 supported in this minimal sender")
 
   let chunkSize = max(conn.state.localChunkSize, 1)
   var buf: seq[byte] = @[]
@@ -582,32 +633,40 @@ proc sendRtmpMessage(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int;
   return rc == 0
 
 proc sendSetChunkSize(conn: ConnCtx; size: int) =
+  # Client tells us preferred chunk size for messages it sends.
+  # should use this for parsing incoming messages
   var p: seq[byte] = @[]
   put4BE(p, uint32(size))
-  discard sendRtmpMessage(conn, csid = 2, msgTypeId = 1, msgStreamId = 0, payload = p)
+  sendRtmpMessage(conn, csid = 2, msgTypeId = 1, msgStreamId = 0, payload = p)
 
 proc sendWindowAckSize(conn: ConnCtx; size: uint32) =
+  # Client tells us preferred window size for acknowledgments.
+  # track bytes received and send ACKs when crossing this threshold
   var p: seq[byte] = @[]
   put4BE(p, size)
-  discard sendRtmpMessage(conn, csid = 2, msgTypeId = 5, msgStreamId = 0, payload = p)
+  sendRtmpMessage(conn, csid = 2, msgTypeId = 5, msgStreamId = 0, payload = p)
 
 proc sendSetPeerBandwidth(conn: ConnCtx; size: uint32; limitType: byte = 2) =
+  # limitType: 0=hard,1=soft,2=dynamic
   var p: seq[byte] = @[]
   put4BE(p, size)
   p.add(limitType) # 0=hard,1=soft,2=dynamic
-  discard sendRtmpMessage(conn, csid = 2, msgTypeId = 6, msgStreamId = 0, payload = p)
+  sendRtmpMessage(conn, csid = 2, msgTypeId = 6, msgStreamId = 0, payload = p)
 
 proc sendAcknowledgement(conn: ConnCtx; seq: uint32) =
+  # Client acknowledging bytes we've received.
+  # should be sent when bytesReceivedSinceAck crosses the windowAckSize threshold
   var p: seq[byte] = @[]
   put4BE(p, seq)
-  discard sendRtmpMessage(conn, csid = 2, msgTypeId = 3, msgStreamId = 0, payload = p)
+  sendRtmpMessage(conn, csid = 2, msgTypeId = 3, msgStreamId = 0, payload = p)
 
 proc sendUserControlStreamBegin(conn: ConnCtx; streamId: int) =
+  # User Control message: Stream Begin (type 4) with stream ID in payload
   var p: seq[byte] = @[]
   # eventType (2 bytes BE) = 0 (StreamBegin)
   p.add(byte(0)); p.add(byte(0))
   put4BE(p, uint32(streamId))
-  discard sendRtmpMessage(conn, csid = 2, msgTypeId = 4, msgStreamId = 0, payload = p)
+  sendRtmpMessage(conn, csid = 2, msgTypeId = 4, msgStreamId = 0, payload = p)
 
 proc amfObj(pairs: openArray[(string, AMF0Value)]): AMF0Value =
   result = newObject()
@@ -616,12 +675,435 @@ proc amfObj(pairs: openArray[(string, AMF0Value)]): AMF0Value =
 
 proc sendAmfCommand(conn: ConnCtx; msgStreamId: int; vals: seq[AMF0Value]) =
   let payload = encodeAMF0Values(vals)
-  discard sendRtmpMessage(conn, csid = 3, msgTypeId = 20, msgStreamId = msgStreamId, payload = payload)
+  sendRtmpMessage(conn, csid = 3, msgTypeId = 20, msgStreamId = msgStreamId, payload = payload)
 
 proc getTxnId(vals: seq[AMF0Value]): float64 =
   if vals.len >= 2 and vals[1] != nil and vals[1].typ == AMF0_Number:
     return vals[1].num
   result = 1.0
+
+proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
+          payloadPtr: ptr byte, payloadLen: int, arg: pointer) =
+  let c = cast[ConnCtx](arg)
+  if c == nil: return
+
+  # Diagnostic: log every incoming chunk message
+  # echo "onChunkMessage: type=", msgTypeId, " stream=", msgStreamId, " len=", payloadLen
+  if payloadLen > 0 and payloadPtr != nil:
+    let dumpN = if payloadLen < 16: payloadLen else: 16
+    let bp = cast[ptr UncheckedArray[byte]](payloadPtr)
+    var hs = ""
+    for i in 0 ..< dumpN:
+      hs.add($((bp[i] shr 4) and 0xF))
+      hs.add($((bp[i]) and 0xF))
+      hs.add(' ')
+    # echo "  data (first ", dumpN, " bytes): ", hs
+
+  # Protocol control: Set Chunk Size (type 1, 4 bytes BE)
+  if msgTypeId == 1 and payloadLen >= 4 and payloadPtr != nil:
+    let b = cast[ptr UncheckedArray[byte]](payloadPtr)
+    let newSize =
+      (int(b[0]) shl 24) or (int(b[1]) shl 16) or (int(b[2]) shl 8) or int(b[3])
+    if newSize > 0 and newSize <= RTMP_MAX_CHUNK_SIZE:
+      c.state.peerChunkSize = newSize
+      setPeerChunkSize(c.chunkCtx, newSize)
+      # echo "peer chunk size set to ", newSize
+    return
+
+  # Window Acknowledgement Size (type 5): client tells us preferred ACK window
+  if msgTypeId == 5 and payloadLen >= 4 and payloadPtr != nil:
+    let b = cast[ptr UncheckedArray[byte]](payloadPtr)
+    let win = (uint32(b[0]) shl 24) or (uint32(b[1]) shl 16) or (uint32(b[2]) shl 8) or uint32(b[3])
+    c.state.windowAckSize = win
+    c.state.bytesReceivedSinceAck = 0'u64
+    # echo "Client requested windowAckSize=", win
+    return
+
+  # Set Peer Bandwidth (type 6): client informs us of bandwidth settings
+  if msgTypeId == 6 and payloadLen >= 5 and payloadPtr != nil:
+    let b = cast[ptr UncheckedArray[byte]](payloadPtr)
+    let bw = (uint32(b[0]) shl 24) or (uint32(b[1]) shl 16) or (uint32(b[2]) shl 8) or uint32(b[3])
+    let limitType = b[4]
+    # echo "Client SetPeerBandwidth: ", bw, " type=", limitType
+    return
+
+  # Acknowledgement (type 3): client acknowledging bytes we've sent
+  if msgTypeId == 3 and payloadLen >= 4 and payloadPtr != nil:
+    let b = cast[ptr UncheckedArray[byte]](payloadPtr)
+    let ack = (uint32(b[0]) shl 24) or (uint32(b[1]) shl 16) or (uint32(b[2]) shl 8) or uint32(b[3])
+    # echo "Client ACK: ", ack
+    return
+
+  # Abort message (type 2): client requests abort of a stream id in payload
+  if msgTypeId == 2 and payloadLen >= 4 and payloadPtr != nil:
+    let b = cast[ptr UncheckedArray[byte]](payloadPtr)
+    let abortCsid = (int(b[0]) shl 24) or (int(b[1]) shl 16) or (int(b[2]) shl 8) or int(b[3])
+    echo "Client Abort for CSID: ", abortCsid
+    # remove any per-chunkstream state
+    if c.chunkCtx != nil:
+      c.chunkCtx.streams.del(abortCsid)
+    return
+
+  # User control (type 4) can be used for StreamBegin/EOF etc; log minimal info
+  if msgTypeId == 4 and payloadLen >= 2 and payloadPtr != nil:
+    let b = cast[ptr UncheckedArray[byte]](payloadPtr)
+    let eventType = (int(b[0]) shl 8) or int(b[1])
+    # echo "UserControl event: ", eventType
+    return
+
+  # Commands/data: AMF0 (type 20/18) and AMF3 (type 17/15 with AMF0 marker)
+  if (msgTypeId == 20 or msgTypeId == 18 or msgTypeId == 17 or msgTypeId == 15) and payloadLen > 0 and payloadPtr != nil:
+    var amfPtr = payloadPtr
+    var amfLen = payloadLen
+    let isDataMsg = (msgTypeId == 18 or msgTypeId == 15)
+    if msgTypeId == 17 or msgTypeId == 15:
+      # AMF3 commands/data often start with 0x00 indicating AMF0 encoding
+      let b = cast[ptr UncheckedArray[byte]](payloadPtr)
+      if payloadLen >= 1 and b[0] == 0'u8:
+        amfPtr = cast[ptr byte](addr b[1])
+        amfLen = payloadLen - 1
+      else:
+        # Unsupported AMF3 payload; ignore for now
+        return
+    var vals: seq[AMF0Value]
+    try:
+      vals = decodeAllAMF0Ptr(amfPtr, amfLen)
+    except:
+      echo "AMF0 decode error payloadLen=", amfLen
+      # show a small hex snippet to aid debugging
+      let maxDump = if amfLen < 64: amfLen else: 64
+      let bptr = cast[ptr UncheckedArray[byte]](amfPtr)
+      var s = ""
+      for i in 0 ..< maxDump:
+        s.add($((bptr[i] shr 4) and 0xF))
+        s.add($((bptr[i]) and 0xF))
+        s.add(' ')
+      # echo "AMF0 payload hex (first ", maxDump, " bytes): ", s
+      
+      # Temporary safety: reply with a generic _result to avoid leaving client waiting
+      # echo "Sending generic _result txn=1 to avoid client hang"
+      sendAmfCommand(c, 0, @[ kAmfCmdResult, kAmfNum0, kAmfNull ])
+      return
+
+    if vals.len == 0 or vals[0] == nil or (vals[0].typ != AMF0_String and vals[0].typ != AMF0_LongString):
+      if isDataMsg:
+        # allow data messages to fall through to forwarding/caching
+        discard
+      else:
+        return
+    let cmd = vals[0].s
+    let txn = getTxnId(vals)
+
+    if cmd == "pause":
+      var wantsPause = true
+      if vals.len >= 4 and vals[3] != nil and vals[3].typ == AMF0_Boolean:
+        wantsPause = vals[3].b
+      
+      let sid = msgStreamId
+      var streamName = c.streamNameById.getOrDefault(sid, "")
+      if streamName.len == 0:
+        for n, sId in c.subscriptions.pairs:
+          if sId == sid:
+            streamName = n
+            break
+
+      let isSubscribedNow = c.subscriptions.hasKey(streamName) and c.subscriptions[streamName] == sid
+      if wantsPause:
+        if isSubscribedNow:
+          echo "Pausing subscription to stream '", streamName, "' for connId=", $c.connId
+          pauseSubscriber(streamName, c)
+          c.pausedSubscriber = true
+          drainOutputQueue(c)
+          let output = bufferevent_get_output(c.bev)
+          if output != nil:
+            let q = evbuffer_get_length(output)
+            if q > 0: discard evbuffer_drain(output, q)
+          let info = amfObj({
+            "level": newString("status"),
+            "code": newString("NetStream.Pause.Notify"),
+            "description": newString("Paused.")
+          })
+          sendAmfCommand(c, sid, @[ newString("onStatus"), kAmfNum0, kAmfNull, info ])
+      else:
+        # Always re-subscribe on unpause (restart stream from beginning)
+        echo "Unpausing subscription to stream '", streamName, "' for connId=", $c.connId
+        drainOutputQueue(c)
+        let se = gStreams.getOrDefault(streamName, nil)
+        if se != nil and se.publisher != nil:
+          # Remove and re-add subscriber to restart stream
+          removeSubscriber(streamName, c)
+          addSubscriber(streamName, c, sid, false) # false = send init headers
+
+          # Send StreamBegin first
+          sendUserControlStreamBegin(c, sid)
+
+          # Send onStatus: NetStream.Play.Reset (optional) then NetStream.Play.Start
+          let resetInfo = amfObj({
+            "level": newString("status"),
+            "code": newString("NetStream.Play.Reset"),
+            "description": newString("Resetting play state.")
+          })
+          sendAmfCommand(c, sid, @[ newString("onStatus"), kAmfNum0, kAmfNull, resetInfo ])
+          let startInfo = amfObj({
+            "level": newString("status"),
+            "code": newString("NetStream.Play.Start"),
+            "description": newString("Started playing."),
+            "details": newString(streamName)
+          })
+          sendAmfCommand(c, sid, @[ newString("onStatus"), kAmfNum0, kAmfNull, startInfo ])
+      return
+
+    # echo "AMF cmd: ", cmd, " txn=", txn, " msgStreamId=", msgStreamId
+    if cmd == "connect":
+      # Minimal connection setup
+      sendWindowAckSize(c, 5_000_000'u32)
+      sendSetPeerBandwidth(c, 5_000_000'u32, 2)
+      sendSetChunkSize(c, 4096)
+      c.state.localChunkSize = 4096
+
+      let props = amfObj({
+        "fmsVer": newString("FMS/3,5,7,7009"),
+        "capabilities": newNumber(31.0)
+      })
+      sendAmfCommand(c, 0, @[ kAmfCmdResult, newNumber(txn), kPropsConnect, kInfoConnectSuccess ])
+      return
+
+    if cmd == "releaseStream" or cmd == "FCPublish":
+      # Many encoders send these; respond with _result to unblock them.
+      sendAmfCommand(c, 0, @[ kAmfCmdResult, newNumber(txn), kAmfNull, kAmfNull ])
+      return
+
+    if cmd == "createStream":
+      let sid = c.nextStreamId
+      c.nextStreamId.inc
+      # echo "createStream -> assigning sid=", sid, " txn=", txn
+      sendAmfCommand(c, 0, @[ kAmfCmdResult, newNumber(txn), kAmfNull, newNumber(float64(sid)) ])
+      return
+    
+    if cmd == "publish":
+      # publish(streamName, publishType?)
+      var streamName = ""
+      for i in 1 ..< vals.len:
+        if vals[i] != nil and vals[i].typ == AMF0_String:
+          streamName = vals[i].s
+          break
+
+      let streamId = msgStreamId
+      sendUserControlStreamBegin(c, streamId)
+
+      # register publisher
+      addPublisher(streamName, c, streamId)
+
+      let info = amfObj({
+        "level": newString("status"),
+        "code": newString("NetStream.Publish.Start"),
+        "description": newString("Start publishing."),
+        "details": newString(streamName)
+      })
+      sendAmfCommand(c, streamId, @[ newString("onStatus"), kAmfNum0, kAmfNull, info ])
+      return
+    
+    # echo "Command: " & cmd
+    if cmd == "play" or cmd == "play2":
+      # play(streamName, ...) - respond with StreamBegin and onStatus Play.Start
+      var streamName = ""
+      for i in 1 ..< vals.len:
+        if vals[i] != nil and vals[i].typ == AMF0_String:
+          streamName = vals[i].s
+          break
+
+      let sid = msgStreamId
+      # If there's no publisher for this stream, inform the player immediately
+      let se = gStreams.getOrDefault(streamName, nil)
+      if se == nil or se.publisher == nil:
+        let nf = amfObj({
+          "level": newString("error"),
+          "code": newString("NetStream.Play.StreamNotFound"),
+          "description": newString("Stream not found")
+        })
+        sendAmfCommand(c, sid, @[ newString("onStatus"), kAmfNum0, kAmfNull, nf ])
+        return
+
+      # Stream begin
+      sendUserControlStreamBegin(c, sid)
+
+      # register subscriber mapping
+      addSubscriber(streamName, c, sid)
+
+      # send onStatus: NetStream.Play.Reset (optional) then NetStream.Play.Start
+      let resetInfo = amfObj({
+        "level": newString("status"),
+        "code": newString("NetStream.Play.Reset"),
+        "description": newString("Resetting play state.")
+      })
+      sendAmfCommand(c, sid, @[ newString("onStatus"), kAmfNum0, kAmfNull, resetInfo ])
+
+      let startInfo = amfObj({
+        "level": newString("status"),
+        "code": newString("NetStream.Play.Start"),
+        "description": newString("Started playing."),
+        "details": newString(streamName)
+      })
+      sendAmfCommand(c, sid, @[ newString("onStatus"), kAmfNum0, kAmfNull, startInfo ])
+      return
+
+    if cmd == "getStreamLength":
+      # Some players query stream length before playing; reply with a numeric length (0.0 = unknown)
+      sendAmfCommand(c, 0, @[ kAmfCmdResult, newNumber(txn), kAmfNull, kAmfNum0 ])
+      return
+
+    if cmd == "closeStream":
+      # closeStream: reply with _result if txn provided and cleanup subscriptions
+      sendAmfCommand(c, msgStreamId, @[ kAmfCmdResult, newNumber(txn), kAmfNull ])
+      removeSubscriptionsByStreamId(c, msgStreamId)
+      if c.publishedStreamId == msgStreamId and c.publishedStreamName.len > 0:
+        removePublisher(c.publishedStreamName)
+        c.publishedStreamName = ""
+        c.publishedStreamId = 0
+      return
+
+    if cmd == "deleteStream":
+      # deleteStream: reply with _result and cleanup
+      sendAmfCommand(c, msgStreamId, @[ kAmfCmdResult, newNumber(txn), kAmfNull ])
+      removeSubscriptionsByStreamId(c, msgStreamId)
+      if c.publishedStreamId == msgStreamId and c.publishedStreamName.len > 0:
+        removePublisher(c.publishedStreamName)
+        reset(c.publishedStreamName)
+        reset(c.publishedStreamId)
+      return
+
+    if cmd == "FCUnpublish" or cmd == "unpublish":
+      # explicit unpublish request from publisher
+      if c.publishedStreamName.len > 0:
+        removePublisher(c.publishedStreamName)
+        reset(c.publishedStreamName)
+        reset(c.publishedStreamId)
+      sendAmfCommand(c, msgStreamId, @[ kAmfCmdResult, newNumber(txn), kAmfNull ])
+      return
+
+    if not isDataMsg: return
+
+  # Forward media (audio/video) and metadata (AMF0 data type 18) from publisher to subscribers
+  if (msgTypeId == 8 or msgTypeId == 9 or msgTypeId == 18) and payloadLen > 0 and payloadPtr != nil:
+    # find stream entry where this conn is publisher
+    for name, se in gStreams.pairs:
+      var matchPub = false
+      if se.publisher == c and se.publisherStreamId == msgStreamId:
+        matchPub = true
+      elif c.publishedStreamName.len > 0 and se.name == c.publishedStreamName and se.publisherStreamId == msgStreamId:
+        # fallback: match by stream name if publisher pointer didn't line up
+        matchPub = true
+      
+      if not matchPub:
+        continue # not the stream we're publishing to
+
+      # detect cache-worthy packets directly from payloadPtr (no copy yet)
+      var
+        isVideoSeq: bool
+        isAudioSeq: bool
+        isVideoKeyframe: bool
+
+      let bp = cast[ptr UncheckedArray[byte]](payloadPtr)
+      if msgTypeId == 9 and payloadLen >= 2:
+        let codecId = bp[0] and 0x0F'u8
+        let frameType = (bp[0] shr 4) and 0x0F'u8
+        isVideoKeyframe = frameType == 1'u8
+        isVideoSeq = (codecId == 7'u8 and bp[1] == 0'u8)
+      elif msgTypeId == 8 and payloadLen >= 2:
+        let soundFormat = (bp[0] shr 4) and 0x0F
+        isAudioSeq = (soundFormat == 10 and bp[1] == 0'u8)
+
+      let needCache = (msgTypeId == 18) or isVideoSeq or isAudioSeq
+      let hasSubs = se.subscribers.len > 0
+      if not hasSubs and not needCache:
+        break
+
+      let shared = newSharedPayload(payloadPtr, payloadLen)
+
+      var dropSubs: seq[SubscriberEntry] = @[]
+      for s in se.subscribers:
+        if s.conn == nil or s.conn.bev == nil or s.conn.closed:
+          dropSubs.add(s)
+          continue
+
+        let output = bufferevent_get_output(s.conn.bev)
+        if output == nil:
+          dropSubs.add(s)
+          continue
+
+        let nowTick = epochMs()
+        let outq = cast[int](evbuffer_get_length(output))
+
+        # During short post-jump recovery, prioritize getting video back in sync.
+        # Drop non-key video and regular audio frames.
+        if s.conn.recoveringUntilMs > nowTick:
+          if msgTypeId == 9 and not isVideoKeyframe:
+            continue
+          if msgTypeId == 8:
+            continue
+
+        if s.conn.slowSubscriber or s.conn.waitForKeyframe:
+          if outq > SLOW_SUBSCRIBER_RESUME_OUTBUF:
+            # queue still too large, keep waiting
+            continue
+
+          # send cached init payloads (meta/audio/video seq) before resuming
+          if se.metaPayload.len > 0:
+            sendRtmpMessage(s.conn, csid = 4, msgTypeId = 18,
+                        msgStreamId = s.msgStreamId, payload = se.metaPayload)
+          if se.audioSeqPayload.len > 0:
+            sendRtmpMessage(s.conn, csid = 4, msgTypeId = 8,
+                        msgStreamId = s.msgStreamId, payload = se.audioSeqPayload)
+          if se.videoSeqPayload.len > 0:
+            sendRtmpMessage(s.conn, csid = 4, msgTypeId = 9,
+                        msgStreamId = s.msgStreamId, payload = se.videoSeqPayload)
+
+          s.conn.slowSubscriber = false
+          s.conn.waitForKeyframe = false
+          s.conn.recoveringUntilMs = 0
+
+        if not sendRtmpMessageShared(s.conn, 4, msgTypeId, s.msgStreamId, shared, int(timestamp)):
+          echo "Failed to send message to subscriber ", s.conn.connId, "; dropping subscriber"
+          removeSubscriber(name, s.conn)
+          dropSubs.add(s)
+          continue
+        
+        # Post-jump grace: avoid immediate queue growth.
+        if s.conn.recoveringUntilMs > nowTick:
+          if msgTypeId == 9 and not isVideoKeyframe:
+            continue
+          if msgTypeId == 8 and outq > (SLOW_SUBSCRIBER_RESUME_OUTBUF div 2):
+            continue
+
+      if dropSubs.len > 0:
+        var aliveSubs: seq[SubscriberEntry] = @[]
+        for s in se.subscribers:
+          var keep = true
+          for d in dropSubs:
+            if d.conn == s.conn and d.msgStreamId == s.msgStreamId:
+              keep = false
+              break
+          if keep:
+            aliveSubs.add(s)
+        se.subscribers = aliveSubs
+
+      # cache copy for future subscribers
+      if needCache:
+        if msgTypeId == 18:
+          se.metaPayload = shared.bytes
+        elif isVideoSeq:
+          se.videoSeqPayload = shared.bytes
+        elif isAudioSeq:
+          se.audioSeqPayload = shared.bytes
+      break # found the stream, no need to check others
+
+  # bookkeeping: count bytes received and send ACK when threshold hit
+  if payloadLen > 0:
+    c.state.bytesReceivedSinceAck = c.state.bytesReceivedSinceAck + uint64(payloadLen)
+    if c.state.windowAckSize > 0 and c.state.bytesReceivedSinceAck >= uint64(c.state.windowAckSize):
+      let ackVal = uint32(c.state.bytesReceivedSinceAck and 0xFFFFFFFF'u64)
+      sendAcknowledgement(c, ackVal)
+      c.state.bytesReceivedSinceAck = 0'u64
 
 # 
 # Read callback
@@ -655,359 +1137,6 @@ proc bev_read_cb(bev: ptr bufferevent, ctx: pointer) {.cdecl.} =
     gConnKeepAlive[cast[pointer](conn)] = conn
 
     conn.chunkCtx = initChunkStreamCtx(conn.state.peerChunkSize)
-    proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
-              payloadPtr: ptr byte, payloadLen: int, arg: pointer) =
-      let c = cast[ConnCtx](arg)
-      if c == nil: return
-
-      # Diagnostic: log every incoming chunk message
-      # echo "onChunkMessage: type=", msgTypeId, " stream=", msgStreamId, " len=", payloadLen
-      if payloadLen > 0 and payloadPtr != nil:
-        let dumpN = if payloadLen < 16: payloadLen else: 16
-        let bp = cast[ptr UncheckedArray[byte]](payloadPtr)
-        var hs = ""
-        for i in 0 ..< dumpN:
-          hs.add($((bp[i] shr 4) and 0xF))
-          hs.add($((bp[i]) and 0xF))
-          hs.add(' ')
-        # echo "  data (first ", dumpN, " bytes): ", hs
-
-      # Protocol control: Set Chunk Size (type 1, 4 bytes BE)
-      if msgTypeId == 1 and payloadLen >= 4 and payloadPtr != nil:
-        let b = cast[ptr UncheckedArray[byte]](payloadPtr)
-        let newSize =
-          (int(b[0]) shl 24) or (int(b[1]) shl 16) or (int(b[2]) shl 8) or int(b[3])
-        if newSize > 0 and newSize <= RTMP_MAX_CHUNK_SIZE:
-          c.state.peerChunkSize = newSize
-          setPeerChunkSize(c.chunkCtx, newSize)
-          # echo "peer chunk size set to ", newSize
-        return
-
-      # Window Acknowledgement Size (type 5): client tells us preferred ACK window
-      if msgTypeId == 5 and payloadLen >= 4 and payloadPtr != nil:
-        let b = cast[ptr UncheckedArray[byte]](payloadPtr)
-        let win = (uint32(b[0]) shl 24) or (uint32(b[1]) shl 16) or (uint32(b[2]) shl 8) or uint32(b[3])
-        c.state.windowAckSize = win
-        c.state.bytesReceivedSinceAck = 0'u64
-        # echo "Client requested windowAckSize=", win
-        return
-
-      # Set Peer Bandwidth (type 6): client informs us of bandwidth settings
-      if msgTypeId == 6 and payloadLen >= 5 and payloadPtr != nil:
-        let b = cast[ptr UncheckedArray[byte]](payloadPtr)
-        let bw = (uint32(b[0]) shl 24) or (uint32(b[1]) shl 16) or (uint32(b[2]) shl 8) or uint32(b[3])
-        let limitType = b[4]
-        # echo "Client SetPeerBandwidth: ", bw, " type=", limitType
-        return
-
-      # Acknowledgement (type 3): client acknowledging bytes we've sent
-      if msgTypeId == 3 and payloadLen >= 4 and payloadPtr != nil:
-        let b = cast[ptr UncheckedArray[byte]](payloadPtr)
-        let ack = (uint32(b[0]) shl 24) or (uint32(b[1]) shl 16) or (uint32(b[2]) shl 8) or uint32(b[3])
-        # echo "Client ACK: ", ack
-        return
-
-      # Abort message (type 2): client requests abort of a stream id in payload
-      if msgTypeId == 2 and payloadLen >= 4 and payloadPtr != nil:
-        let b = cast[ptr UncheckedArray[byte]](payloadPtr)
-        let abortCsid = (int(b[0]) shl 24) or (int(b[1]) shl 16) or (int(b[2]) shl 8) or int(b[3])
-        echo "Client Abort for CSID: ", abortCsid
-        # remove any per-chunkstream state
-        if c.chunkCtx != nil:
-          c.chunkCtx.streams.del(abortCsid)
-        return
-
-      # User control (type 4) can be used for StreamBegin/EOF etc; log minimal info
-      if msgTypeId == 4 and payloadLen >= 2 and payloadPtr != nil:
-        let b = cast[ptr UncheckedArray[byte]](payloadPtr)
-        let eventType = (int(b[0]) shl 8) or int(b[1])
-        # echo "UserControl event: ", eventType
-        return
-
-      # Commands/data: AMF0 (type 20/18) and AMF3 (type 17/15 with AMF0 marker)
-      if (msgTypeId == 20 or msgTypeId == 18 or msgTypeId == 17 or msgTypeId == 15) and payloadLen > 0 and payloadPtr != nil:
-        var amfPtr = payloadPtr
-        var amfLen = payloadLen
-        let isDataMsg = (msgTypeId == 18 or msgTypeId == 15)
-        if msgTypeId == 17 or msgTypeId == 15:
-          # AMF3 commands/data often start with 0x00 indicating AMF0 encoding
-          let b = cast[ptr UncheckedArray[byte]](payloadPtr)
-          if payloadLen >= 1 and b[0] == 0'u8:
-            amfPtr = cast[ptr byte](addr b[1])
-            amfLen = payloadLen - 1
-          else:
-            # Unsupported AMF3 payload; ignore for now
-            return
-        var vals: seq[AMF0Value]
-        try:
-          vals = decodeAllAMF0Ptr(amfPtr, amfLen)
-        except:
-          echo "AMF0 decode error payloadLen=", amfLen
-          # show a small hex snippet to aid debugging
-          let maxDump = if amfLen < 64: amfLen else: 64
-          let bptr = cast[ptr UncheckedArray[byte]](amfPtr)
-          var s = ""
-          for i in 0 ..< maxDump:
-            s.add($((bptr[i] shr 4) and 0xF))
-            s.add($((bptr[i]) and 0xF))
-            s.add(' ')
-          # echo "AMF0 payload hex (first ", maxDump, " bytes): ", s
-          
-          # Temporary safety: reply with a generic _result to avoid leaving client waiting
-          # echo "Sending generic _result txn=1 to avoid client hang"
-          sendAmfCommand(c, 0, @[ kAmfCmdResult, kAmfNum0, kAmfNull ])
-          return
-
-        if vals.len == 0 or vals[0] == nil or (vals[0].typ != AMF0_String and vals[0].typ != AMF0_LongString):
-          if isDataMsg:
-            # allow data messages to fall through to forwarding/caching
-            discard
-          else:
-            return
-        let cmd = vals[0].s
-        let txn = getTxnId(vals)
-        # echo "AMF cmd: ", cmd, " txn=", txn, " msgStreamId=", msgStreamId
-        if cmd == "connect":
-          # Minimal connection setup
-          sendWindowAckSize(c, 5_000_000'u32)
-          sendSetPeerBandwidth(c, 5_000_000'u32, 2)
-          sendSetChunkSize(c, 4096)
-          c.state.localChunkSize = 4096
-
-          let props = amfObj({
-            "fmsVer": newString("FMS/3,5,7,7009"),
-            "capabilities": newNumber(31.0)
-          })
-          sendAmfCommand(c, 0, @[ kAmfCmdResult, newNumber(txn), kPropsConnect, kInfoConnectSuccess ])
-          return
-
-        if cmd == "releaseStream" or cmd == "FCPublish":
-          # Many encoders send these; respond with _result to unblock them.
-          sendAmfCommand(c, 0, @[ kAmfCmdResult, newNumber(txn), kAmfNull, kAmfNull ])
-          return
-
-        if cmd == "createStream":
-          let sid = c.nextStreamId
-          c.nextStreamId.inc
-          # echo "createStream -> assigning sid=", sid, " txn=", txn
-          sendAmfCommand(c, 0, @[ kAmfCmdResult, newNumber(txn), kAmfNull, newNumber(float64(sid)) ])
-          return
-        
-        if cmd == "publish":
-          # publish(streamName, publishType?)
-          var streamName = ""
-          for i in 1 ..< vals.len:
-            if vals[i] != nil and vals[i].typ == AMF0_String:
-              streamName = vals[i].s
-              break
-
-          let streamId = msgStreamId
-          sendUserControlStreamBegin(c, streamId)
-
-          # register publisher
-          addPublisher(streamName, c, streamId)
-
-          let info = amfObj({
-            "level": newString("status"),
-            "code": newString("NetStream.Publish.Start"),
-            "description": newString("Start publishing."),
-            "details": newString(streamName)
-          })
-          sendAmfCommand(c, streamId, @[ newString("onStatus"), kAmfNum0, kAmfNull, info ])
-          return
-        # echo "Command: " & cmd
-        if cmd == "play" or cmd == "play2":
-          # play(streamName, ...) - respond with StreamBegin and onStatus Play.Start
-          var streamName = ""
-          for i in 1 ..< vals.len:
-            if vals[i] != nil and vals[i].typ == AMF0_String:
-              streamName = vals[i].s
-              break
-
-          let sid = msgStreamId
-          # If there's no publisher for this stream, inform the player immediately
-          let se = gStreams.getOrDefault(streamName, nil)
-          if se == nil or se.publisher == nil:
-            let nf = amfObj({
-              "level": newString("error"),
-              "code": newString("NetStream.Play.StreamNotFound"),
-              "description": newString("Stream not found")
-            })
-            sendAmfCommand(c, sid, @[ newString("onStatus"), kAmfNum0, kAmfNull, nf ])
-            return
-
-          # Stream begin
-          sendUserControlStreamBegin(c, sid)
-
-          # register subscriber mapping
-          addSubscriber(streamName, c, sid)
-
-          # send onStatus: NetStream.Play.Reset (optional) then NetStream.Play.Start
-          let resetInfo = amfObj({
-            "level": newString("status"),
-            "code": newString("NetStream.Play.Reset"),
-            "description": newString("Resetting play state.")
-          })
-          sendAmfCommand(c, sid, @[ newString("onStatus"), kAmfNum0, kAmfNull, resetInfo ])
-
-          let startInfo = amfObj({
-            "level": newString("status"),
-            "code": newString("NetStream.Play.Start"),
-            "description": newString("Started playing."),
-            "details": newString(streamName)
-          })
-          sendAmfCommand(c, sid, @[ newString("onStatus"), kAmfNum0, kAmfNull, startInfo ])
-          return
-
-        if cmd == "getStreamLength":
-          # Some players query stream length before playing; reply with a numeric length (0.0 = unknown)
-          sendAmfCommand(c, 0, @[ kAmfCmdResult, newNumber(txn), kAmfNull, kAmfNum0 ])
-          return
-
-        if cmd == "closeStream":
-          # closeStream: reply with _result if txn provided and cleanup subscriptions
-          sendAmfCommand(c, msgStreamId, @[ kAmfCmdResult, newNumber(txn), kAmfNull ])
-          removeSubscriptionsByStreamId(c, msgStreamId)
-          if c.publishedStreamId == msgStreamId and c.publishedStreamName.len > 0:
-            removePublisher(c.publishedStreamName)
-            c.publishedStreamName = ""
-            c.publishedStreamId = 0
-          return
-
-        if cmd == "deleteStream":
-          # deleteStream: reply with _result and cleanup
-          sendAmfCommand(c, msgStreamId, @[ kAmfCmdResult, newNumber(txn), kAmfNull ])
-          removeSubscriptionsByStreamId(c, msgStreamId)
-          if c.publishedStreamId == msgStreamId and c.publishedStreamName.len > 0:
-            removePublisher(c.publishedStreamName)
-            reset(c.publishedStreamName)
-            reset(c.publishedStreamId)
-          return
-
-        if cmd == "FCUnpublish" or cmd == "unpublish":
-          # explicit unpublish request from publisher
-          if c.publishedStreamName.len > 0:
-            removePublisher(c.publishedStreamName)
-            reset(c.publishedStreamName)
-            reset(c.publishedStreamId)
-          sendAmfCommand(c, msgStreamId, @[ kAmfCmdResult, newNumber(txn), kAmfNull ])
-          return
-
-        if not isDataMsg: return
-
-      # Forward media (audio/video) and metadata (AMF0 data type 18) from publisher to subscribers
-      if (msgTypeId == 8 or msgTypeId == 9 or msgTypeId == 18) and payloadLen > 0 and payloadPtr != nil:
-        # find stream entry where this conn is publisher
-        for name, se in gStreams.pairs:
-          var matchPub = false
-          if se.publisher == c and se.publisherStreamId == msgStreamId:
-            matchPub = true
-          elif c.publishedStreamName.len > 0 and se.name == c.publishedStreamName and se.publisherStreamId == msgStreamId:
-            # fallback: match by stream name if publisher pointer didn't line up
-            matchPub = true
-          
-          if not matchPub: continue # not the stream we're publishing to
-
-          # detect cache-worthy packets directly from payloadPtr (no copy yet)
-          var
-            isVideoSeq: bool
-            isAudioSeq: bool
-            isVideoKeyframe: bool
-
-          let bp = cast[ptr UncheckedArray[byte]](payloadPtr)
-          if msgTypeId == 9 and payloadLen >= 2:
-            let codecId = bp[0] and 0x0F'u8
-            let frameType = (bp[0] shr 4) and 0x0F'u8
-            isVideoKeyframe = frameType == 1'u8
-            isVideoSeq = (codecId == 7'u8 and bp[1] == 0'u8)
-          elif msgTypeId == 8 and payloadLen >= 2:
-            let soundFormat = (bp[0] shr 4) and 0x0F
-            isAudioSeq = (soundFormat == 10 and bp[1] == 0'u8)
-
-          let needCache = (msgTypeId == 18) or isVideoSeq or isAudioSeq
-          let hasSubs = se.subscribers.len > 0
-          if not hasSubs and not needCache:
-            break
-
-          let shared = newSharedPayload(payloadPtr, payloadLen)
-
-          var dropSubs: seq[SubscriberEntry] = @[]
-          for s in se.subscribers:
-            if s.conn == nil or s.conn.bev == nil or s.conn.closed:
-              dropSubs.add(s)
-              continue
-
-            let output = bufferevent_get_output(s.conn.bev)
-            if output == nil:
-              dropSubs.add(s)
-              continue
-
-            let nowTick = epochMs()
-            let outq = cast[int](evbuffer_get_length(output))
-
-            # Force jump-to-live when queue is too large.
-            if outq > MAX_SUBSCRIBER_OUTBUF:
-              if (nowTick - s.conn.lastLiveJumpMs) >= LIVE_JUMP_COOLDOWN_MS:
-                let qlen = evbuffer_get_length(output)
-                if qlen > 0:
-                  discard evbuffer_drain(output, qlen)
-                s.conn.slowSubscriber = true
-                s.conn.waitForKeyframe = true
-                s.conn.lastLiveJumpMs = nowTick
-              continue
-
-            # Recover only on a keyframe and only when queue is low enough.
-            if s.conn.slowSubscriber or s.conn.waitForKeyframe:
-              if outq > SLOW_SUBSCRIBER_RESUME_OUTBUF:
-                continue
-              if msgTypeId != 9 or not isVideoKeyframe:
-                continue
-
-              if se.metaPayload.len > 0:
-                discard sendRtmpMessage(s.conn, csid = 4, msgTypeId = 18, msgStreamId = s.msgStreamId, payload = se.metaPayload)
-              if se.audioSeqPayload.len > 0:
-                discard sendRtmpMessage(s.conn, csid = 4, msgTypeId = 8, msgStreamId = s.msgStreamId, payload = se.audioSeqPayload)
-              if se.videoSeqPayload.len > 0:
-                discard sendRtmpMessage(s.conn, csid = 4, msgTypeId = 9, msgStreamId = s.msgStreamId, payload = se.videoSeqPayload)
-
-              s.conn.slowSubscriber = false
-              s.conn.waitForKeyframe = false
-
-            if not sendRtmpMessageShared(s.conn, 4, msgTypeId, s.msgStreamId, shared, int(timestamp)):
-              dropSubs.add(s)
-              continue
-
-          if dropSubs.len > 0:
-            var aliveSubs: seq[SubscriberEntry] = @[]
-            for s in se.subscribers:
-              var keep = true
-              for d in dropSubs:
-                if d.conn == s.conn and d.msgStreamId == s.msgStreamId:
-                  keep = false
-                  break
-              if keep:
-                aliveSubs.add(s)
-            se.subscribers = aliveSubs
-
-          # cache copy for future subscribers
-          if needCache:
-            if msgTypeId == 18:
-              se.metaPayload = shared.bytes
-            elif isVideoSeq:
-              se.videoSeqPayload = shared.bytes
-            elif isAudioSeq:
-              se.audioSeqPayload = shared.bytes
-
-          break
-
-      # bookkeeping: count bytes received and send ACK when threshold hit
-      if payloadLen > 0:
-        c.state.bytesReceivedSinceAck = c.state.bytesReceivedSinceAck + uint64(payloadLen)
-        if c.state.windowAckSize > 0 and c.state.bytesReceivedSinceAck >= uint64(c.state.windowAckSize):
-          let ackVal = uint32(c.state.bytesReceivedSinceAck and 0xFFFFFFFF'u64)
-          sendAcknowledgement(c, ackVal)
-          c.state.bytesReceivedSinceAck = 0'u64
-
     setOnMessage(conn.chunkCtx, onChunkMessage, cast[pointer](conn))
     bufferevent_setcb(bev, bev_read_cb, nil, bev_event_cb, cast[pointer](conn))
 

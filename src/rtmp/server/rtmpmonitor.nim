@@ -47,9 +47,7 @@ var gMonitor*: RtmpMonitor = RtmpMonitor()
 
 proc dumpHook*(s: var string, v: DateTime) =
   ## Convert `DateTime` to JSONY string
-  add s, '"'
-  add s, v.format(initTimeFormat("yyyy-MM-dd'T'hh:mm:ss'.'ffffffz"))
-  add s, '"'
+  add s, $(toUnix(toTime(v)))
 
 proc evbufAddString(buf: ptr Evbuffer; s: string) =
   if buf == nil or s.len == 0: return
