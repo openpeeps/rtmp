@@ -11,4 +11,3 @@ srcDir        = "src"
 
 requires "nim >= 2.0.0"
 requires "libevent#head"
-requires "jsony#head"
