@@ -25,7 +25,7 @@
   <div class="document" id="documentId">
     <div class="container">
       <h1 class="title">Index</h1>
-      Modules: <a href="index.html">rtmp</a>, <a href="rtmp/rtmpclient.html">rtmp/rtmpclient</a>, <a href="rtmp/rtmpplaylist.html">rtmp/rtmpplaylist</a>, <a href="rtmp/rtmpserver.html">rtmp/rtmpserver</a>, <a href="rtmp/server/actionmessage.html">rtmp/server/actionmessage</a>, <a href="rtmp/server/chunkstream.html">rtmp/server/chunkstream</a>, <a href="rtmp/server/rtmpmonitor.html">rtmp/server/rtmpmonitor</a>.<br/><p /><h2>API symbols</h2>
+      Modules: <a href="index.html">rtmp</a>, <a href="rtmp/private/memutils.html">rtmp/private/memutils</a>, <a href="rtmp/rtmpclient.html">rtmp/rtmpclient</a>, <a href="rtmp/rtmpplaylist.html">rtmp/rtmpplaylist</a>, <a href="rtmp/rtmpserver.html">rtmp/rtmpserver</a>, <a href="rtmp/server/actionmessage.html">rtmp/server/actionmessage</a>, <a href="rtmp/server/chunkstream.html">rtmp/server/chunkstream</a>, <a href="rtmp/server/rtmpmonitor.html">rtmp/server/rtmpmonitor</a>.<br/><p /><h2>API symbols</h2>
 <dl><dt><a name="AacStreamState" href="#AacStreamState"><span>AacStreamState:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpclient: type AacStreamState" href="rtmp/rtmpclient.html#AacStreamState">rtmpclient: type AacStreamState</a></li>
@@ -150,6 +150,10 @@
 <li><a class="reference external"
           data-doc-search-tag="chunkstream: proc feedBytes(ctx: ChunkStreamCtx; data: ptr byte; len: int): int" href="rtmp/server/chunkstream.html#feedBytes%2CChunkStreamCtx%2Cptr.byte%2Cint">chunkstream: proc feedBytes(ctx: ChunkStreamCtx; data: ptr byte; len: int): int</a></li>
           </ul></dd>
+<dt><a name="freemem" href="#freemem"><span>freemem:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="memutils: template freemem(x: untyped)" href="rtmp/private/memutils.html#freemem.t%2Cuntyped">memutils: template freemem(x: untyped)</a></li>
+          </ul></dd>
 <dt><a name="gMonitor" href="#gMonitor"><span>gMonitor:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpmonitor: var gMonitor" href="rtmp/server/rtmpmonitor.html#gMonitor">rtmpmonitor: var gMonitor</a></li>
@@ -189,6 +193,10 @@
 <dt><a name="loadPlaylist" href="#loadPlaylist"><span>loadPlaylist:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpplaylist: proc loadPlaylist(filePath: string): seq[string]" href="rtmp/rtmpplaylist.html#loadPlaylist%2Cstring">rtmpplaylist: proc loadPlaylist(filePath: string): seq[string]</a></li>
+          </ul></dd>
+<dt><a name="malloc_trim" href="#malloc_trim"><span>malloc_trim:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="memutils: proc malloc_trim(pad: csize_t = 0): bool" href="rtmp/private/memutils.html#malloc_trim%2Ccsize_t">memutils: proc malloc_trim(pad: csize_t = 0): bool</a></li>
           </ul></dd>
 <dt><a name="MAX_SUBSCRIBER_OUTBUF" href="#MAX_SUBSCRIBER_OUTBUF"><span>MAX_SUBSCRIBER_OUTBUF:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -265,6 +273,10 @@
 <dt><a name="PlaylistState" href="#PlaylistState"><span>PlaylistState:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpplaylist: type PlaylistState" href="rtmp/rtmpplaylist.html#PlaylistState">rtmpplaylist: type PlaylistState</a></li>
+          </ul></dd>
+<dt><a name="releaseUnusedMemory" href="#releaseUnusedMemory"><span>releaseUnusedMemory:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="memutils: proc releaseUnusedMemory(): bool" href="rtmp/private/memutils.html#releaseUnusedMemory">memutils: proc releaseUnusedMemory(): bool</a></li>
           </ul></dd>
 <dt><a name="RtmpClient" href="#RtmpClient"><span>RtmpClient:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -412,7 +424,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-25 14:18:13 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-26 11:45:11 UTC</small>
       </div>
     </div>
   </div>

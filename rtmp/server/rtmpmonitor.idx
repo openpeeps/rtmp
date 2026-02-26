@@ -6,4 +6,4 @@ nim	RtmpStream	rtmp/server/rtmpmonitor.html#RtmpStream	object RtmpStream		29
 nim	RtmpMonitor	rtmp/server/rtmpmonitor.html#RtmpMonitor	type RtmpMonitor		39
 nim	gMonitor	rtmp/server/rtmpmonitor.html#gMonitor	var gMonitor		44
 nim	dumpHook	rtmp/server/rtmpmonitor.html#dumpHook,string,DateTime	proc dumpHook(s: var string; v: DateTime)		48
-nim	apiRequestCb	rtmp/server/rtmpmonitor.html#apiRequestCb,ptr.evhttp_request,pointer	proc apiRequestCb(req: ptr evhttp_request; arg: pointer)		65
+nim	apiRequestCb	rtmp/server/rtmpmonitor.html#apiRequestCb,ptr.evhttp_request,pointer	proc apiRequestCb(req: ptr evhttp_request; arg: pointer)		63

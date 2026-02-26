@@ -1,0 +1,4 @@
+nimTitle	memutils	rtmp/private/memutils.html	module rtmp/private/memutils		0
+nim	malloc_trim	rtmp/private/memutils.html#malloc_trim,csize_t	proc malloc_trim(pad: csize_t = 0): bool		42
+nim	releaseUnusedMemory	rtmp/private/memutils.html#releaseUnusedMemory	proc releaseUnusedMemory(): bool		45
+nim	freemem	rtmp/private/memutils.html#freemem.t,untyped	template freemem(x: untyped)		52

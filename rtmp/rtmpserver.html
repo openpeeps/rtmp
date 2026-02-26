@@ -79,9 +79,12 @@
   publishedStreamName*: string ## Name of the stream this connection is publishing (if any)
   publishedStreamId*: int    ## Stream ID assigned to the published stream (if any)
   subscriptions*: Table[string, int] ## Map of stream name to stream ID for all streams this connection is subscribed to
+  streamNameById*: Table[int, string] ## Map of stream ID to stream name for reverse lookup when sending messages
   slowSubscriber*: bool      ## true when subscriber output queue exceeded MAX_SUBSCRIBER_OUTBUF
+  pausedSubscriber*: bool    ## true when subscriber is paused (not receiving messages) due to slowSubscriber or manual pause
   waitForKeyframe*: bool     ## when recovering from lag, drop media until next video keyframe
-  lastLiveJumpMs*: int64     ## Last time this subscriber was force-jumped to live">ConnCtx</a></li>
+  lastLiveJumpMs*: int64     ## Last time this subscriber was force-jumped to live
+  recoveringUntilMs*: int64  ## If recovering from lag, ignore media until this timestamp to allow jump-to-live recovery">ConnCtx</a></li>
 <li><a class="reference" href="#RtmpConnState" title="RtmpConnState = object
   peerChunkSize*: int        ## Chunk size specified by the peer (client), used
                              ## for parsing incoming messages
@@ -130,7 +133,7 @@
 <li><a class="reference" href="#HS_DONE" title="HS_DONE = 2">HS_DONE</a></li>
 <li><a class="reference" href="#HS_INIT" title="HS_INIT = 0">HS_INIT</a></li>
 <li><a class="reference" href="#HS_S0S1_SENT" title="HS_S0S1_SENT = 1">HS_S0S1_SENT</a></li>
-<li><a class="reference" href="#MAX_SUBSCRIBER_OUTBUF" title="MAX_SUBSCRIBER_OUTBUF = 8388608">MAX_SUBSCRIBER_OUTBUF</a></li>
+<li><a class="reference" href="#MAX_SUBSCRIBER_OUTBUF" title="MAX_SUBSCRIBER_OUTBUF = 3145728">MAX_SUBSCRIBER_OUTBUF</a></li>
 <li><a class="reference" href="#RTMP_DEFAULT_CHUNK_SIZE" title="RTMP_DEFAULT_CHUNK_SIZE = 128">RTMP_DEFAULT_CHUNK_SIZE</a></li>
 <li><a class="reference" href="#RTMP_HANDSHAKE_SIZE" title="RTMP_HANDSHAKE_SIZE = 1536">RTMP_HANDSHAKE_SIZE</a></li>
 <li><a class="reference" href="#RTMP_MAX_CHUNK_SIZE" title="RTMP_MAX_CHUNK_SIZE = 65536">RTMP_MAX_CHUNK_SIZE</a></li>
@@ -184,7 +187,7 @@
     <div class="section" id="6">
   <h1><a class="toc-backref" href="#6">Imports</a></h1>
   <dl class="item">
-    <a class="reference external" href="server/actionmessage.html">server/actionmessage</a>, <a class="reference external" href="server/chunkstream.html">server/chunkstream</a>, <a class="reference external" href="server/rtmpmonitor.html">server/rtmpmonitor</a>
+    <a class="reference external" href="server/actionmessage.html">server/actionmessage</a>, <a class="reference external" href="server/chunkstream.html">server/chunkstream</a>, <a class="reference external" href="server/rtmpmonitor.html">server/rtmpmonitor</a>, <a class="reference external" href="private/memutils.html">private/memutils</a>
   </dl>
 </div>
 <div class="section" id="7">
@@ -212,9 +215,12 @@
   <span class="Identifier">publishedStreamName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span> <span class="Comment">## Name of the stream this connection is publishing (if any)</span>
   <span class="Identifier">publishedStreamId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>    <span class="Comment">## Stream ID assigned to the published stream (if any)</span>
   <span class="Identifier">subscriptions</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">,</span> <span class="Identifier">int</span><span class="Other">]</span> <span class="Comment">## Map of stream name to stream ID for all streams this connection is subscribed to</span>
+  <span class="Identifier">streamNameById</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">int</span><span class="Other">,</span> <span class="Identifier">string</span><span class="Other">]</span> <span class="Comment">## Map of stream ID to stream name for reverse lookup when sending messages</span>
   <span class="Identifier">slowSubscriber</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>      <span class="Comment">## true when subscriber output queue exceeded MAX_SUBSCRIBER_OUTBUF</span>
+  <span class="Identifier">pausedSubscriber</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>    <span class="Comment">## true when subscriber is paused (not receiving messages) due to slowSubscriber or manual pause</span>
   <span class="Identifier">waitForKeyframe</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>     <span class="Comment">## when recovering from lag, drop media until next video keyframe</span>
-  <span class="Identifier">lastLiveJumpMs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>     <span class="Comment">## Last time this subscriber was force-jumped to live</span></pre></dt>
+  <span class="Identifier">lastLiveJumpMs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>     <span class="Comment">## Last time this subscriber was force-jumped to live</span>
+  <span class="Identifier">recoveringUntilMs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>  <span class="Comment">## If recovering from lag, ignore media until this timestamp to allow jump-to-live recovery</span></pre></dt>
   <dd>
     
     
@@ -338,7 +344,7 @@
   </dd>
 </div>
 <div id="MAX_SUBSCRIBER_OUTBUF">
-  <dt><pre><a href="rtmpserver.html#MAX_SUBSCRIBER_OUTBUF"><span class="Identifier">MAX_SUBSCRIBER_OUTBUF</span></a> <span class="Other">=</span> <span class="DecNumber">8388608</span></pre></dt>
+  <dt><pre><a href="rtmpserver.html#MAX_SUBSCRIBER_OUTBUF"><span class="Identifier">MAX_SUBSCRIBER_OUTBUF</span></a> <span class="Other">=</span> <span class="DecNumber">3145728</span></pre></dt>
   <dd>
     
     todo allow for configurable limits and better backpressure handling
@@ -458,7 +464,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-25 14:18:12 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-26 11:45:11 UTC</small>
       </div>
     </div>
   </div>

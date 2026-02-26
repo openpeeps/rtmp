@@ -1,22 +1,22 @@
 nimTitle	rtmpserver	rtmp/rtmpserver.html	module rtmp/rtmpserver		0
-nim	DEFAULT_RTMP_PORT	rtmp/rtmpserver.html#DEFAULT_RTMP_PORT	const DEFAULT_RTMP_PORT		24
-nim	RTMP_HANDSHAKE_SIZE	rtmp/rtmpserver.html#RTMP_HANDSHAKE_SIZE	const RTMP_HANDSHAKE_SIZE		26
-nim	MAX_SUBSCRIBER_OUTBUF	rtmp/rtmpserver.html#MAX_SUBSCRIBER_OUTBUF	const MAX_SUBSCRIBER_OUTBUF		28
-nim	HS_INIT	rtmp/rtmpserver.html#HS_INIT	const HS_INIT		39
-nim	HS_S0S1_SENT	rtmp/rtmpserver.html#HS_S0S1_SENT	const HS_S0S1_SENT		41
-nim	HS_DONE	rtmp/rtmpserver.html#HS_DONE	const HS_DONE		43
-nim	RTMP_DEFAULT_CHUNK_SIZE	rtmp/rtmpserver.html#RTMP_DEFAULT_CHUNK_SIZE	const RTMP_DEFAULT_CHUNK_SIZE		46
-nim	RTMP_MAX_CHUNK_SIZE	rtmp/rtmpserver.html#RTMP_MAX_CHUNK_SIZE	const RTMP_MAX_CHUNK_SIZE		48
-nim	RtmpConnState	rtmp/rtmpserver.html#RtmpConnState	object RtmpConnState		63
-nim	RtmpServerSettings	rtmp/rtmpserver.html#RtmpServerSettings	object RtmpServerSettings		80
-nim	RtmpServer	rtmp/rtmpserver.html#RtmpServer	type RtmpServer		89
-nim	RTMPServerError	rtmp/rtmpserver.html#RTMPServerError	object RTMPServerError		102
-nim	ConnCtx	rtmp/rtmpserver.html#ConnCtx	type ConnCtx		104
-nim	monitorAddStream	rtmp/rtmpserver.html#monitorAddStream,string,ConnCtx	proc monitorAddStream(name: string; pubConn: ConnCtx)		213
-nim	monitorRemoveStream	rtmp/rtmpserver.html#monitorRemoveStream,string	proc monitorRemoveStream(name: string)		223
-nim	monitorAddSubscriber	rtmp/rtmpserver.html#monitorAddSubscriber,string,ConnCtx	proc monitorAddSubscriber(streamName: string; subConn: ConnCtx)		226
-nim	monitorRemoveSubscriber	rtmp/rtmpserver.html#monitorRemoveSubscriber,string,ConnCtx	proc monitorRemoveSubscriber(streamName: string; subConn: ConnCtx)		233
-nim	SubscriberEntry	rtmp/rtmpserver.html#SubscriberEntry	object SubscriberEntry		246
-nim	StreamEntry	rtmp/rtmpserver.html#StreamEntry	type StreamEntry		255
-nim	newRTMPServer	rtmp/rtmpserver.html#newRTMPServer,RtmpServerSettings	proc newRTMPServer(settings: RtmpServerSettings = RtmpServerSettings()): RtmpServer		1127
-nim	startServer	rtmp/rtmpserver.html#startServer,RtmpServer	proc startServer(server: RtmpServer)		1139
+nim	DEFAULT_RTMP_PORT	rtmp/rtmpserver.html#DEFAULT_RTMP_PORT	const DEFAULT_RTMP_PORT		23
+nim	RTMP_HANDSHAKE_SIZE	rtmp/rtmpserver.html#RTMP_HANDSHAKE_SIZE	const RTMP_HANDSHAKE_SIZE		25
+nim	MAX_SUBSCRIBER_OUTBUF	rtmp/rtmpserver.html#MAX_SUBSCRIBER_OUTBUF	const MAX_SUBSCRIBER_OUTBUF		27
+nim	HS_INIT	rtmp/rtmpserver.html#HS_INIT	const HS_INIT		35
+nim	HS_S0S1_SENT	rtmp/rtmpserver.html#HS_S0S1_SENT	const HS_S0S1_SENT		37
+nim	HS_DONE	rtmp/rtmpserver.html#HS_DONE	const HS_DONE		39
+nim	RTMP_DEFAULT_CHUNK_SIZE	rtmp/rtmpserver.html#RTMP_DEFAULT_CHUNK_SIZE	const RTMP_DEFAULT_CHUNK_SIZE		41
+nim	RTMP_MAX_CHUNK_SIZE	rtmp/rtmpserver.html#RTMP_MAX_CHUNK_SIZE	const RTMP_MAX_CHUNK_SIZE		43
+nim	RtmpConnState	rtmp/rtmpserver.html#RtmpConnState	object RtmpConnState		58
+nim	RtmpServerSettings	rtmp/rtmpserver.html#RtmpServerSettings	object RtmpServerSettings		75
+nim	RtmpServer	rtmp/rtmpserver.html#RtmpServer	type RtmpServer		84
+nim	RTMPServerError	rtmp/rtmpserver.html#RTMPServerError	object RTMPServerError		97
+nim	ConnCtx	rtmp/rtmpserver.html#ConnCtx	type ConnCtx		99
+nim	monitorAddStream	rtmp/rtmpserver.html#monitorAddStream,string,ConnCtx	proc monitorAddStream(name: string; pubConn: ConnCtx)		214
+nim	monitorRemoveStream	rtmp/rtmpserver.html#monitorRemoveStream,string	proc monitorRemoveStream(name: string)		224
+nim	monitorAddSubscriber	rtmp/rtmpserver.html#monitorAddSubscriber,string,ConnCtx	proc monitorAddSubscriber(streamName: string; subConn: ConnCtx)		227
+nim	monitorRemoveSubscriber	rtmp/rtmpserver.html#monitorRemoveSubscriber,string,ConnCtx	proc monitorRemoveSubscriber(streamName: string; subConn: ConnCtx)		234
+nim	SubscriberEntry	rtmp/rtmpserver.html#SubscriberEntry	object SubscriberEntry		247
+nim	StreamEntry	rtmp/rtmpserver.html#StreamEntry	type StreamEntry		256
+nim	newRTMPServer	rtmp/rtmpserver.html#newRTMPServer,RtmpServerSettings	proc newRTMPServer(settings: RtmpServerSettings = RtmpServerSettings()): RtmpServer		1256
+nim	startServer	rtmp/rtmpserver.html#startServer,RtmpServer	proc startServer(server: RtmpServer)		1268
