@@ -26,8 +26,14 @@ Here you can find some simple examples to get you started with the RTMP package.
 ### Create a RTMP server
 ```nim
 import pkg/rtmp
+var rtmpServer = newRTMPServer(settings = RtmpServerSettings(
+  enableRestApi = true, # Enable REST API for server management
+  restApiPort = 8080, # Port for REST API
+  ...
+))
 
-rtmp.startServer() # Start RTMP server on default port 1935
+# start the RTMP server
+rtmpServer.startServer()
 ```
 
 ### Create a RTMP streaming client
