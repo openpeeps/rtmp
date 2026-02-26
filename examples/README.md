@@ -10,5 +10,5 @@ You can use the SRS (Simple Realtime Server) as a test RTMP server to connect yo
 
 
 ### Credits
-Music from my personal collection
-Footage by [Cottonbro Studio](https://www.pexels.com/@cottonbro/)
+- Music from my personal collection
+- Footage by [Cottonbro Studio](https://www.pexels.com/@cottonbro/)
