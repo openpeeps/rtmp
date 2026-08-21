@@ -1,0 +1,11 @@
+nimTitle	openssl_hmac	rtmp/private/openssl_hmac.html	module rtmp/private/openssl_hmac		0
+nim	EvpMd	rtmp/private/openssl_hmac.html#EvpMd	type EvpMd		7
+nim	EvpMdCtx	rtmp/private/openssl_hmac.html#EvpMdCtx	type EvpMdCtx		8
+nim	HMACCtx	rtmp/private/openssl_hmac.html#HMACCtx	type HMACCtx		9
+nim	EVP_sha256	rtmp/private/openssl_hmac.html#EVP_sha256	proc EVP_sha256(): EvpMd		11
+nim	HMAC	rtmp/private/openssl_hmac.html#HMAC,EvpMd,pointer,cint,pointer,csize_t,pointer,ptr.cuint	proc HMAC(md: EvpMd; key: pointer; keyLen: cint; data: pointer; dataLen: csize_t;\n     output: pointer; outputLen: ptr cuint): pointer		13
+nim	HMAC_CTX_new	rtmp/private/openssl_hmac.html#HMAC_CTX_new	proc HMAC_CTX_new(): HMACCtx		18
+nim	HMAC_CTX_free	rtmp/private/openssl_hmac.html#HMAC_CTX_free,HMACCtx	proc HMAC_CTX_free(ctx: HMACCtx)		21
+nim	HMAC_Init_ex	rtmp/private/openssl_hmac.html#HMAC_Init_ex,HMACCtx,pointer,cint,EvpMd,pointer	proc HMAC_Init_ex(ctx: HMACCtx; key: pointer; keyLen: cint; md: EvpMd; impl: pointer): cint		24
+nim	HMAC_Update	rtmp/private/openssl_hmac.html#HMAC_Update,HMACCtx,pointer,csize_t	proc HMAC_Update(ctx: HMACCtx; data: pointer; dataLen: csize_t): cint		28
+nim	HMAC_Final	rtmp/private/openssl_hmac.html#HMAC_Final,HMACCtx,pointer,ptr.cuint	proc HMAC_Final(ctx: HMACCtx; output: pointer; outputLen: ptr cuint): cint		31

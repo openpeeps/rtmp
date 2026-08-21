@@ -16,13 +16,16 @@
 <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAA3XAAAN1wFCKJt4AAAAB3RJTUUH4QQQEwksSS9ZWwAAAk1JREFUWMPtll2ITVEUx39nn/O7Y5qR8f05wtCUUr6ZIS++8pEnkZInPImneaCQ5METNdOkeFBKUhMPRIkHKfEuUZSUlGlKPN2TrgfncpvmnntnmlEyq1Z7t89/rf9a6+y99oZxGZf/XeIq61EdtgKXgdXA0xrYAvBjOIF1AI9zvjcC74BSpndrJPkBWDScTF8Aa4E3wDlgHbASaANmVqlcCnwHvgDvgVfAJ+AikAAvgfVZwLnSVZHZaOuKoQi3ZOMi4NkYkpe1p4J7A8BpYAD49hfIy/oqG0+hLomiKP2L5L+1ubn5115S+3OAn4EnwBlgMzCjyt6ZAnQCJ4A7wOs88iRJHvw50HoujuPBoCKwHWiosy8MdfZnAdcHk8dxXFJ3VQbQlCTJvRBCGdRbD4M6uc5glpY3eAihpN5S5w12diSEcCCEcKUO4ljdr15T76ur1FDDLIQQ3qv71EdDOe3Kxj3leRXyk+pxdWnFWod6Wt2bY3de3aSuUHcPBVimHs7mK9WrmeOF6lR1o9qnzskh2ar2qm1qizpfXaPeVGdlmGN5pb09qMxz1Xb1kLqgzn1RyH7JUXW52lr5e/Kqi9qpto7V1atuUzfnARrV7jEib1T76gG2qxdGmXyiekkt1GswPTtek0aBfJp6YySGBfWg2tPQ0FAYgf1stUfdmdcjarbYJEniKIq6gY/Aw+zWHAC+p2labGpqiorFYgGYCEzN7oQdQClN07O1/EfDyGgC0ALMBdYAi4FyK+4H3gLPsxfR1zRNi+NP7nH5J+QntnXe5B5mpfQAAAAASUVORK5CYII=">
 
 <!-- CSS -->
-<link rel="stylesheet" type="text/css" href="../nimdoc.out.css?v=2.2.8">
+<link rel="stylesheet" type="text/css" href="../nimdoc.out.css?v=2.2.10">
 
 <!-- JS -->
-<script type="text/javascript" src="../dochack.js?v=2.2.8"></script>
+<script type="text/javascript" src="../dochack.js?v=2.2.10"></script>
 </head>
 <body>
   <div class="document" id="documentId">
+    <input type="checkbox" id="nav-toggle" hidden>
+    <label for="nav-toggle" id="nav-burger">&#9776;</label>
+    <label for="nav-toggle" id="nav-overlay"></label>
     <div class="container">
       <h1 class="title">rtmp/rtmpserver</h1>
       <div class="row">
@@ -59,68 +62,56 @@
     <summary><a class="reference reference-toplevel" href="#7" id="57">Types</a></summary>
     <ul class="simple simple-toc-section">
       <li><a class="reference" href="#ConnCtx" title="ConnCtx = ref object
-  bev*: ptr bufferevent      ## Libevent buffer event for this connection, used for reading/writing data
-  state*: RtmpConnState      ## Per-connection RTMP protocol state (chunk sizes, ack window, stream table, etc)
-  inbuf*: ptr Evbuffer       ## Input buffer for reading incoming data from the client
-  outbuf*: ptr Evbuffer      ## Output buffer for writing outgoing data to the client
-  hsState*: int              ## Handshake state: HS_INIT, HS_S0S1_SENT, or HS_DONE
-  partialHdr*: seq[byte]     ## Buffer for accumulating partial RTMP chunk headers across reads
-  partialMsg*: seq[byte]     ## Buffer for accumulating partial RTMP chunk payloads across reads
-  expectedMsgLen*: int       ## Expected length of the current RTMP message being assembled
-  msgTypeId*: int            ## RTMP message type ID of the current message being parsed
-  msgStreamId*: int          ## RTMP message stream ID of the current message being parsed
-  chunkCtx*: ChunkStreamCtx  ## Per-connection chunk stream context for parsing RTMP chunks
-  serverS1*: seq[byte]       ## Server's S1 handshake data (used to validate C2 from client)
-  nextStreamId*: int         ## Next available stream ID to assign for createStream requests
-  connId*: int               ## Unique connection ID for debugging and tracking
-  clientIp*: string          ## IP address of the connected client (for logging and monitoring)
-  closed*: bool              ## True if this connection has been closed and cleaned up
-  closeReason*: string       ## Reason for connection closure (e.g., &quot;EOF&quot;, &quot;ERROR&quot;, &quot;cleanup&quot;)
-  publishedStreamName*: string ## Name of the stream this connection is publishing (if any)
-  publishedStreamId*: int    ## Stream ID assigned to the published stream (if any)
-  subscriptions*: Table[string, int] ## Map of stream name to stream ID for all streams this connection is subscribed to
-  streamNameById*: Table[int, string] ## Map of stream ID to stream name for reverse lookup when sending messages
-  slowSubscriber*: bool      ## true when subscriber output queue exceeded MAX_SUBSCRIBER_OUTBUF
-  pausedSubscriber*: bool    ## true when subscriber is paused (not receiving messages) due to slowSubscriber or manual pause
-  waitForKeyframe*: bool     ## when recovering from lag, drop media until next video keyframe
-  lastLiveJumpMs*: int64     ## Last time this subscriber was force-jumped to live
-  recoveringUntilMs*: int64  ## If recovering from lag, ignore media until this timestamp to allow jump-to-live recovery">ConnCtx</a></li>
+  conn*: Connection
+  state*: RtmpConnState
+  hsState*: int
+  partialHdr*: seq[byte]
+  partialMsg*: seq[byte]
+  expectedMsgLen*: int
+  msgTypeId*: int
+  msgStreamId*: int
+  chunkCtx*: ChunkStreamCtx
+  serverS1*: seq[byte]
+  nextStreamId*: int
+  connId*: int
+  clientIp*: string
+  closed*: bool
+  closeReason*: string
+  publishedStreamName*: string
+  publishedStreamId*: int
+  subscriptions*: Table[string, int]
+  streamNameById*: Table[int, string]
+  slowSubscriber*: bool
+  pausedSubscriber*: bool
+  waitForKeyframe*: bool
+  lastLiveJumpMs*: int64
+  recoveringUntilMs*: int64">ConnCtx</a></li>
 <li><a class="reference" href="#RtmpConnState" title="RtmpConnState = object
-  peerChunkSize*: int        ## Chunk size specified by the peer (client), used
-                             ## for parsing incoming messages
-  localChunkSize*: int ## Chunk size we use for sending messages to the peer;
-                       ## can be adjusted with SetChunkSize
-  windowAckSize*: uint32     ## Acknowledgment window size specified by the peer;
-                             ## we track how many bytes we've received since the last ACK
-  bytesReceivedSinceAck*: uint64 ## Counter for bytes received since last acknowledgment sent to peer
-  streams*: Table[int, pointer] ## Table of active streams by stream ID; can be used
-                                ## to track per-stream state if needed">RtmpConnState</a></li>
+  peerChunkSize*: int
+  localChunkSize*: int
+  windowAckSize*: uint32
+  bytesReceivedSinceAck*: uint64
+  streams*: Table[int, pointer]">RtmpConnState</a></li>
 <li><a class="reference" href="#RtmpServer" title="RtmpServer = ref object
-  base*: ptr event_base      ## Libevent base for managing events
-  listenFd*: cint            ## File descriptor for the listening socket
-  restApiListener*: ptr evconnlistener ## Listener used by the REST API HTTP server
-  restApiHttp*: ptr evhttp   ## Libevent HTTP server handle for REST API
-  settings*: RtmpServerSettings ## Configuration settings for the RTMP server">RtmpServer</a></li>
+  loop*: Loop
+  httpServer*: HttpServer
+  settings*: RtmpServerSettings">RtmpServer</a></li>
 <li><a class="reference" href="#RTMPServerError" title="RTMPServerError = object of CatchableError">RTMPServerError</a></li>
 <li><a class="reference" href="#RtmpServerSettings" title="RtmpServerSettings = object
-  enableRestApi*: bool = true ## Whether to enable the REST API for stream management (default: true)
-  restApiPort*: Port = 4000'u ## Port for the REST API listener (default: 4000)
-  rtmpPort*: Port = 1935'u   ## Port for the RTMP server to listen on (default: 1935)">RtmpServerSettings</a></li>
+  enableRestApi*: bool = true
+  restApiPort*: Port = 4000'u
+  rtmpPort*: Port = 1935'u">RtmpServerSettings</a></li>
 <li><a class="reference" href="#StreamEntry" title="StreamEntry = ref object
-  name*: string              ## Name of the stream (e.g., &quot;live/streamKey&quot;)
-  publisher*: ConnCtx        ## Connection that is publishing this stream (if any)
-  publisherStreamId*: int    ## Stream ID assigned to the publisher's stream for this stream name
-  subscribers*: seq[SubscriberEntry] ## List of subscribers to this stream
-  metaPayload*: seq[byte]    ## Cached metadata payload (RTMP message type 18) to
-                             ## send to new subscribers for stream initialization
-  videoSeqPayload*: seq[byte] ## Cached video sequence header payload (RTMP message type 9)
-                              ## to send to new subscribers for stream initialization
-  audioSeqPayload*: seq[byte] ## Cached audio sequence header payload (RTMP message type 8)
-                              ## to send to new subscribers for stream initialization">StreamEntry</a></li>
+  name*: string
+  publisher*: ConnCtx
+  publisherStreamId*: int
+  subscribers*: seq[SubscriberEntry]
+  metaPayload*: seq[byte]
+  videoSeqPayload*: seq[byte]
+  audioSeqPayload*: seq[byte]">StreamEntry</a></li>
 <li><a class="reference" href="#SubscriberEntry" title="SubscriberEntry = object
-  conn*: ConnCtx             ## Connection of the subscriber
-  msgStreamId*: int          ## Stream ID assigned to this subscription for
-                             ## sending messages to the subscriber">SubscriberEntry</a></li>
+  conn*: ConnCtx
+  msgStreamId*: int">SubscriberEntry</a></li>
 
     </ul>
   </details>
@@ -145,7 +136,11 @@
   <details open>
     <summary><a class="reference reference-toplevel" href="#12" id="62">Procs</a></summary>
     <ul class="simple simple-toc-section">
-      <ul class="simple nested-toc-section">monitorAddStream
+      <ul class="simple nested-toc-section">apiRequestHandler
+  <li><a class="reference" href="#apiRequestHandler%2CHttpRequest%2CHttpResponse" title="apiRequestHandler(req: HttpRequest; res: HttpResponse)">apiRequestHandler(req: HttpRequest; res: HttpResponse)</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">monitorAddStream
   <li><a class="reference" href="#monitorAddStream%2Cstring%2CConnCtx" title="monitorAddStream(name: string; pubConn: ConnCtx)">monitorAddStream(name: string; pubConn: ConnCtx)</a></li>
 
 </ul>
@@ -182,45 +177,43 @@
     <div id="tocRoot"></div>
     
     <p class="module-desc"><p>This module implements RTMP server functionality, including connection handling, RTMP message parsing, and a simple pub/sub mechanism for streams.</p>
-<p>It uses libevent for asynchronous network I/O and supports basic RTMP commands and control messages. The server can be extended to handle incoming streams as needed.</p>
+<p>It uses powpow for asynchronous network I/O and supports basic RTMP commands and control messages. The server can be extended to handle incoming streams as needed.</p>
 </p>
     <div class="section" id="6">
   <h1><a class="toc-backref" href="#6">Imports</a></h1>
   <dl class="item">
-    <a class="reference external" href="server/actionmessage.html">server/actionmessage</a>, <a class="reference external" href="server/chunkstream.html">server/chunkstream</a>, <a class="reference external" href="server/rtmpmonitor.html">server/rtmpmonitor</a>, <a class="reference external" href="private/memutils.html">private/memutils</a>
+    <a class="reference external" href="server/actionmessage.html">server/actionmessage</a>, <a class="reference external" href="server/chunkstream.html">server/chunkstream</a>, <a class="reference external" href="server/rtmpmonitor.html">server/rtmpmonitor</a>, <a class="reference external" href="server/handshake.html">server/handshake</a>, <a class="reference external" href="private/memutils.html">private/memutils</a>
   </dl>
 </div>
 <div class="section" id="7">
   <h1><a class="toc-backref" href="#7">Types</a></h1>
   <dl class="item">
     <div id="ConnCtx">
-  <dt><pre><a href="rtmpserver.html#ConnCtx"><span class="Identifier">ConnCtx</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
-  <span class="Identifier">bev</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">bufferevent</span>      <span class="Comment">## Libevent buffer event for this connection, used for reading/writing data</span>
-  <span class="Identifier">state</span><span class="Operator">*</span><span class="Other">:</span> <a href="rtmpserver.html#RtmpConnState"><span class="Identifier">RtmpConnState</span></a>      <span class="Comment">## Per-connection RTMP protocol state (chunk sizes, ack window, stream table, etc)</span>
-  <span class="Identifier">inbuf</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">Evbuffer</span>       <span class="Comment">## Input buffer for reading incoming data from the client</span>
-  <span class="Identifier">outbuf</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">Evbuffer</span>      <span class="Comment">## Output buffer for writing outgoing data to the client</span>
-  <span class="Identifier">hsState</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>              <span class="Comment">## Handshake state: HS_INIT, HS_S0S1_SENT, or HS_DONE</span>
-  <span class="Identifier">partialHdr</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span>     <span class="Comment">## Buffer for accumulating partial RTMP chunk headers across reads</span>
-  <span class="Identifier">partialMsg</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span>     <span class="Comment">## Buffer for accumulating partial RTMP chunk payloads across reads</span>
-  <span class="Identifier">expectedMsgLen</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>       <span class="Comment">## Expected length of the current RTMP message being assembled</span>
-  <span class="Identifier">msgTypeId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>            <span class="Comment">## RTMP message type ID of the current message being parsed</span>
-  <span class="Identifier">msgStreamId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>          <span class="Comment">## RTMP message stream ID of the current message being parsed</span>
-  <span class="Identifier">chunkCtx</span><span class="Operator">*</span><span class="Other">:</span> <a href="server/chunkstream.html#ChunkStreamCtx"><span class="Identifier">ChunkStreamCtx</span></a>  <span class="Comment">## Per-connection chunk stream context for parsing RTMP chunks</span>
-  <span class="Identifier">serverS1</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span>       <span class="Comment">## Server's S1 handshake data (used to validate C2 from client)</span>
-  <span class="Identifier">nextStreamId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>         <span class="Comment">## Next available stream ID to assign for createStream requests</span>
-  <span class="Identifier">connId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>               <span class="Comment">## Unique connection ID for debugging and tracking</span>
-  <span class="Identifier">clientIp</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>          <span class="Comment">## IP address of the connected client (for logging and monitoring)</span>
-  <span class="Identifier">closed</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>              <span class="Comment">## True if this connection has been closed and cleaned up</span>
-  <span class="Identifier">closeReason</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>       <span class="Comment">## Reason for connection closure (e.g., &quot;EOF&quot;, &quot;ERROR&quot;, &quot;cleanup&quot;)</span>
-  <span class="Identifier">publishedStreamName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span> <span class="Comment">## Name of the stream this connection is publishing (if any)</span>
-  <span class="Identifier">publishedStreamId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>    <span class="Comment">## Stream ID assigned to the published stream (if any)</span>
-  <span class="Identifier">subscriptions</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">,</span> <span class="Identifier">int</span><span class="Other">]</span> <span class="Comment">## Map of stream name to stream ID for all streams this connection is subscribed to</span>
-  <span class="Identifier">streamNameById</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">int</span><span class="Other">,</span> <span class="Identifier">string</span><span class="Other">]</span> <span class="Comment">## Map of stream ID to stream name for reverse lookup when sending messages</span>
-  <span class="Identifier">slowSubscriber</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>      <span class="Comment">## true when subscriber output queue exceeded MAX_SUBSCRIBER_OUTBUF</span>
-  <span class="Identifier">pausedSubscriber</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>    <span class="Comment">## true when subscriber is paused (not receiving messages) due to slowSubscriber or manual pause</span>
-  <span class="Identifier">waitForKeyframe</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>     <span class="Comment">## when recovering from lag, drop media until next video keyframe</span>
-  <span class="Identifier">lastLiveJumpMs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>     <span class="Comment">## Last time this subscriber was force-jumped to live</span>
-  <span class="Identifier">recoveringUntilMs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>  <span class="Comment">## If recovering from lag, ignore media until this timestamp to allow jump-to-live recovery</span></pre></dt>
+  <dt><pre><a href="#ConnCtx"><span class="Identifier">ConnCtx</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <span class="Identifier">conn</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Connection</span>
+  <span class="Identifier">state</span><span class="Operator">*</span><span class="Other">:</span> <a href="#RtmpConnState"><span class="Identifier">RtmpConnState</span></a>
+  <span class="Identifier">hsState</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">partialHdr</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span>
+  <span class="Identifier">partialMsg</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span>
+  <span class="Identifier">expectedMsgLen</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">msgTypeId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">msgStreamId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">chunkCtx</span><span class="Operator">*</span><span class="Other">:</span> <a href="server/chunkstream.html#ChunkStreamCtx"><span class="Identifier">ChunkStreamCtx</span></a>
+  <span class="Identifier">serverS1</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span>
+  <span class="Identifier">nextStreamId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">connId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">clientIp</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">closed</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">closeReason</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">publishedStreamName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">publishedStreamId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">subscriptions</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">,</span> <span class="Identifier">int</span><span class="Other">]</span>
+  <span class="Identifier">streamNameById</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">int</span><span class="Other">,</span> <span class="Identifier">string</span><span class="Other">]</span>
+  <span class="Identifier">slowSubscriber</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">pausedSubscriber</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">waitForKeyframe</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">lastLiveJumpMs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>
+  <span class="Identifier">recoveringUntilMs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span></pre></dt>
   <dd>
     
     
@@ -228,37 +221,31 @@
   </dd>
 </div>
 <div id="RtmpConnState">
-  <dt><pre><a href="rtmpserver.html#RtmpConnState"><span class="Identifier">RtmpConnState</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">peerChunkSize</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>        <span class="Comment">## Chunk size specified by the peer (client), used</span>
-                             <span class="Comment">## for parsing incoming messages</span>
-  <span class="Identifier">localChunkSize</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span> <span class="Comment">## Chunk size we use for sending messages to the peer;</span>
-                       <span class="Comment">## can be adjusted with SetChunkSize</span>
-  <span class="Identifier">windowAckSize</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>     <span class="Comment">## Acknowledgment window size specified by the peer;</span>
-                             <span class="Comment">## we track how many bytes we've received since the last ACK</span>
-  <span class="Identifier">bytesReceivedSinceAck</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint64</span> <span class="Comment">## Counter for bytes received since last acknowledgment sent to peer</span>
-  <span class="Identifier">streams</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">int</span><span class="Other">,</span> <span class="Identifier">pointer</span><span class="Other">]</span> <span class="Comment">## Table of active streams by stream ID; can be used</span>
-                                <span class="Comment">## to track per-stream state if needed</span></pre></dt>
+  <dt><pre><a href="#RtmpConnState"><span class="Identifier">RtmpConnState</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">peerChunkSize</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">localChunkSize</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">windowAckSize</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>
+  <span class="Identifier">bytesReceivedSinceAck</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint64</span>
+  <span class="Identifier">streams</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">int</span><span class="Other">,</span> <span class="Identifier">pointer</span><span class="Other">]</span></pre></dt>
   <dd>
     
-    Per-connection RTMP state, including chunk sizes, acknowledgment tracking, and stream state
+    
     
   </dd>
 </div>
 <div id="RtmpServer">
-  <dt><pre><a href="rtmpserver.html#RtmpServer"><span class="Identifier">RtmpServer</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
-  <span class="Identifier">base</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">event_base</span>      <span class="Comment">## Libevent base for managing events</span>
-  <span class="Identifier">listenFd</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">cint</span>            <span class="Comment">## File descriptor for the listening socket</span>
-  <span class="Identifier">restApiListener</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">evconnlistener</span> <span class="Comment">## Listener used by the REST API HTTP server</span>
-  <span class="Identifier">restApiHttp</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">evhttp</span>   <span class="Comment">## Libevent HTTP server handle for REST API</span>
-  <span class="Identifier">settings</span><span class="Operator">*</span><span class="Other">:</span> <a href="rtmpserver.html#RtmpServerSettings"><span class="Identifier">RtmpServerSettings</span></a> <span class="Comment">## Configuration settings for the RTMP server</span></pre></dt>
+  <dt><pre><a href="#RtmpServer"><span class="Identifier">RtmpServer</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <span class="Identifier">loop</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Loop</span>
+  <span class="Identifier">httpServer</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">HttpServer</span>
+  <span class="Identifier">settings</span><span class="Operator">*</span><span class="Other">:</span> <a href="#RtmpServerSettings"><span class="Identifier">RtmpServerSettings</span></a></pre></dt>
   <dd>
     
-    Main RTMP server object holding the server context and any global state
+    
     
   </dd>
 </div>
 <div id="RTMPServerError">
-  <dt><pre><a href="rtmpserver.html#RTMPServerError"><span class="Identifier">RTMPServerError</span></a> <span class="Other">=</span> <span class="Keyword">object</span> <span class="Keyword">of</span> <span class="Identifier">CatchableError</span></pre></dt>
+  <dt><pre><a href="#RTMPServerError"><span class="Identifier">RTMPServerError</span></a> <span class="Other">=</span> <span class="Keyword">object</span> <span class="Keyword">of</span> <span class="Identifier">CatchableError</span></pre></dt>
   <dd>
     
     
@@ -266,10 +253,10 @@
   </dd>
 </div>
 <div id="RtmpServerSettings">
-  <dt><pre><a href="rtmpserver.html#RtmpServerSettings"><span class="Identifier">RtmpServerSettings</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">enableRestApi</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span> <span class="Other">=</span> <span class="DecNumber">true</span> <span class="Comment">## Whether to enable the REST API for stream management (default: true)</span>
-  <span class="Identifier">restApiPort</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Port</span> <span class="Other">=</span> <span class="DecNumber">4000'u</span> <span class="Comment">## Port for the REST API listener (default: 4000)</span>
-  <span class="Identifier">rtmpPort</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Port</span> <span class="Other">=</span> <span class="DecNumber">1935'u</span>   <span class="Comment">## Port for the RTMP server to listen on (default: 1935)</span></pre></dt>
+  <dt><pre><a href="#RtmpServerSettings"><span class="Identifier">RtmpServerSettings</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">enableRestApi</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span> <span class="Other">=</span> <span class="DecNumber">true</span>
+  <span class="Identifier">restApiPort</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Port</span> <span class="Other">=</span> <span class="DecNumber">4000'u</span>
+  <span class="Identifier">rtmpPort</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Port</span> <span class="Other">=</span> <span class="DecNumber">1935'u</span></pre></dt>
   <dd>
     
     
@@ -277,31 +264,27 @@
   </dd>
 </div>
 <div id="StreamEntry">
-  <dt><pre><a href="rtmpserver.html#StreamEntry"><span class="Identifier">StreamEntry</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
-  <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>              <span class="Comment">## Name of the stream (e.g., &quot;live/streamKey&quot;)</span>
-  <span class="Identifier">publisher</span><span class="Operator">*</span><span class="Other">:</span> <a href="rtmpserver.html#ConnCtx"><span class="Identifier">ConnCtx</span></a>        <span class="Comment">## Connection that is publishing this stream (if any)</span>
-  <span class="Identifier">publisherStreamId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>    <span class="Comment">## Stream ID assigned to the publisher's stream for this stream name</span>
-  <span class="Identifier">subscribers</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="rtmpserver.html#SubscriberEntry"><span class="Identifier">SubscriberEntry</span></a><span class="Other">]</span> <span class="Comment">## List of subscribers to this stream</span>
-  <span class="Identifier">metaPayload</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span>    <span class="Comment">## Cached metadata payload (RTMP message type 18) to</span>
-                             <span class="Comment">## send to new subscribers for stream initialization</span>
-  <span class="Identifier">videoSeqPayload</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span> <span class="Comment">## Cached video sequence header payload (RTMP message type 9)</span>
-                              <span class="Comment">## to send to new subscribers for stream initialization</span>
-  <span class="Identifier">audioSeqPayload</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span> <span class="Comment">## Cached audio sequence header payload (RTMP message type 8)</span>
-                              <span class="Comment">## to send to new subscribers for stream initialization</span></pre></dt>
+  <dt><pre><a href="#StreamEntry"><span class="Identifier">StreamEntry</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">publisher</span><span class="Operator">*</span><span class="Other">:</span> <a href="#ConnCtx"><span class="Identifier">ConnCtx</span></a>
+  <span class="Identifier">publisherStreamId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">subscribers</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="#SubscriberEntry"><span class="Identifier">SubscriberEntry</span></a><span class="Other">]</span>
+  <span class="Identifier">metaPayload</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span>
+  <span class="Identifier">videoSeqPayload</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span>
+  <span class="Identifier">audioSeqPayload</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span></pre></dt>
   <dd>
     
-    Represents a published stream, holding the publisher connection, assigned stream ID, list of subscribers, and cached metadata/sequence headers for new subscribers
+    
     
   </dd>
 </div>
 <div id="SubscriberEntry">
-  <dt><pre><a href="rtmpserver.html#SubscriberEntry"><span class="Identifier">SubscriberEntry</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">conn</span><span class="Operator">*</span><span class="Other">:</span> <a href="rtmpserver.html#ConnCtx"><span class="Identifier">ConnCtx</span></a>             <span class="Comment">## Connection of the subscriber</span>
-  <span class="Identifier">msgStreamId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>          <span class="Comment">## Stream ID assigned to this subscription for</span>
-                             <span class="Comment">## sending messages to the subscriber</span></pre></dt>
+  <dt><pre><a href="#SubscriberEntry"><span class="Identifier">SubscriberEntry</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">conn</span><span class="Operator">*</span><span class="Other">:</span> <a href="#ConnCtx"><span class="Identifier">ConnCtx</span></a>
+  <span class="Identifier">msgStreamId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span></pre></dt>
   <dd>
     
-    Represents a subscriber to a stream, holding the connection context and assigned message stream ID for sending messages to this subscriber
+    
     
   </dd>
 </div>
@@ -312,66 +295,66 @@
   <h1><a class="toc-backref" href="#10">Consts</a></h1>
   <dl class="item">
     <div id="DEFAULT_RTMP_PORT">
-  <dt><pre><a href="rtmpserver.html#DEFAULT_RTMP_PORT"><span class="Identifier">DEFAULT_RTMP_PORT</span></a> <span class="Other">=</span> <span class="DecNumber">1935</span></pre></dt>
+  <dt><pre><a href="#DEFAULT_RTMP_PORT"><span class="Identifier">DEFAULT_RTMP_PORT</span></a> <span class="Other">=</span> <span class="DecNumber">1935</span></pre></dt>
   <dd>
     
-    Default port for RTMP servers to listen on
+    
     
   </dd>
 </div>
 <div id="HS_DONE">
-  <dt><pre><a href="rtmpserver.html#HS_DONE"><span class="Identifier">HS_DONE</span></a> <span class="Other">=</span> <span class="DecNumber">2</span></pre></dt>
+  <dt><pre><a href="#HS_DONE"><span class="Identifier">HS_DONE</span></a> <span class="Other">=</span> <span class="DecNumber">2</span></pre></dt>
   <dd>
     
-    Handshake complete, ready for RTMP messages
+    
     
   </dd>
 </div>
 <div id="HS_INIT">
-  <dt><pre><a href="rtmpserver.html#HS_INIT"><span class="Identifier">HS_INIT</span></a> <span class="Other">=</span> <span class="DecNumber">0</span></pre></dt>
+  <dt><pre><a href="#HS_INIT"><span class="Identifier">HS_INIT</span></a> <span class="Other">=</span> <span class="DecNumber">0</span></pre></dt>
   <dd>
     
-    Initial state before handshake starts
+    
     
   </dd>
 </div>
 <div id="HS_S0S1_SENT">
-  <dt><pre><a href="rtmpserver.html#HS_S0S1_SENT"><span class="Identifier">HS_S0S1_SENT</span></a> <span class="Other">=</span> <span class="DecNumber">1</span></pre></dt>
+  <dt><pre><a href="#HS_S0S1_SENT"><span class="Identifier">HS_S0S1_SENT</span></a> <span class="Other">=</span> <span class="DecNumber">1</span></pre></dt>
   <dd>
     
-    Handshake state after sending S0 and S1, waiting for S0S1S2 from client
+    
     
   </dd>
 </div>
 <div id="MAX_SUBSCRIBER_OUTBUF">
-  <dt><pre><a href="rtmpserver.html#MAX_SUBSCRIBER_OUTBUF"><span class="Identifier">MAX_SUBSCRIBER_OUTBUF</span></a> <span class="Other">=</span> <span class="DecNumber">3145728</span></pre></dt>
+  <dt><pre><a href="#MAX_SUBSCRIBER_OUTBUF"><span class="Identifier">MAX_SUBSCRIBER_OUTBUF</span></a> <span class="Other">=</span> <span class="DecNumber">3145728</span></pre></dt>
   <dd>
     
-    todo allow for configurable limits and better backpressure handling
+    
     
   </dd>
 </div>
 <div id="RTMP_DEFAULT_CHUNK_SIZE">
-  <dt><pre><a href="rtmpserver.html#RTMP_DEFAULT_CHUNK_SIZE"><span class="Identifier">RTMP_DEFAULT_CHUNK_SIZE</span></a> <span class="Other">=</span> <span class="DecNumber">128</span></pre></dt>
+  <dt><pre><a href="#RTMP_DEFAULT_CHUNK_SIZE"><span class="Identifier">RTMP_DEFAULT_CHUNK_SIZE</span></a> <span class="Other">=</span> <span class="DecNumber">128</span></pre></dt>
   <dd>
     
-    Default RTMP chunk size before any SetChunkSize messages are processed
+    
     
   </dd>
 </div>
 <div id="RTMP_HANDSHAKE_SIZE">
-  <dt><pre><a href="rtmpserver.html#RTMP_HANDSHAKE_SIZE"><span class="Identifier">RTMP_HANDSHAKE_SIZE</span></a> <span class="Other">=</span> <span class="DecNumber">1536</span></pre></dt>
+  <dt><pre><a href="#RTMP_HANDSHAKE_SIZE"><span class="Identifier">RTMP_HANDSHAKE_SIZE</span></a> <span class="Other">=</span> <span class="DecNumber">1536</span></pre></dt>
   <dd>
     
-    RTMP handshake S1/S2 size in bytes
+    
     
   </dd>
 </div>
 <div id="RTMP_MAX_CHUNK_SIZE">
-  <dt><pre><a href="rtmpserver.html#RTMP_MAX_CHUNK_SIZE"><span class="Identifier">RTMP_MAX_CHUNK_SIZE</span></a> <span class="Other">=</span> <span class="DecNumber">65536</span></pre></dt>
+  <dt><pre><a href="#RTMP_MAX_CHUNK_SIZE"><span class="Identifier">RTMP_MAX_CHUNK_SIZE</span></a> <span class="Other">=</span> <span class="DecNumber">65536</span></pre></dt>
   <dd>
     
-    Maximum RTMP chunk size supported by this implementation (for sanity checking)
+    
     
   </dd>
 </div>
@@ -381,13 +364,26 @@
 <div class="section" id="12">
   <h1><a class="toc-backref" href="#12">Procs</a></h1>
   <dl class="item">
-    <div id="monitorAddStream-procs-all">
+    <div id="apiRequestHandler-procs-all">
+  <div id="apiRequestHandler,HttpRequest,HttpResponse">
+  <dt><pre><span class="Keyword">proc</span> <a href="#apiRequestHandler%2CHttpRequest%2CHttpResponse"><span class="Identifier">apiRequestHandler</span></a><span class="Other">(</span><span class="Identifier">req</span><span class="Other">:</span> <span class="Identifier">HttpRequest</span><span class="Other">;</span> <span class="Identifier">res</span><span class="Other">:</span> <span class="Identifier">HttpResponse</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">gcsafe</span><span class="Other">,</span>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">TimeEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    
+  </dd>
+</div>
+
+</div>
+<div id="monitorAddStream-procs-all">
   <div id="monitorAddStream,string,ConnCtx">
-  <dt><pre><span class="Keyword">proc</span> <a href="#monitorAddStream%2Cstring%2CConnCtx"><span class="Identifier">monitorAddStream</span></a><span class="Other">(</span><span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">pubConn</span><span class="Other">:</span> <a href="rtmpserver.html#ConnCtx"><span class="Identifier">ConnCtx</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#monitorAddStream%2Cstring%2CConnCtx"><span class="Identifier">monitorAddStream</span></a><span class="Other">(</span><span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">pubConn</span><span class="Other">:</span> <a href="#ConnCtx"><span class="Identifier">ConnCtx</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">TimeEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    Add a new stream to the monitor with the given name and publisher connection
+    
     
   </dd>
 </div>
@@ -395,11 +391,11 @@
 </div>
 <div id="monitorAddSubscriber-procs-all">
   <div id="monitorAddSubscriber,string,ConnCtx">
-  <dt><pre><span class="Keyword">proc</span> <a href="#monitorAddSubscriber%2Cstring%2CConnCtx"><span class="Identifier">monitorAddSubscriber</span></a><span class="Other">(</span><span class="Identifier">streamName</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">subConn</span><span class="Other">:</span> <a href="rtmpserver.html#ConnCtx"><span class="Identifier">ConnCtx</span></a><span class="Other">)</span> {.
+  <dt><pre><span class="Keyword">proc</span> <a href="#monitorAddSubscriber%2Cstring%2CConnCtx"><span class="Identifier">monitorAddSubscriber</span></a><span class="Other">(</span><span class="Identifier">streamName</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">subConn</span><span class="Other">:</span> <a href="#ConnCtx"><span class="Identifier">ConnCtx</span></a><span class="Other">)</span> {.
     <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">TimeEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    Add a subscriber to the monitor's stream entry for the given stream name and subscriber connection
+    
     
   </dd>
 </div>
@@ -418,7 +414,7 @@
 </div>
 <div id="monitorRemoveSubscriber-procs-all">
   <div id="monitorRemoveSubscriber,string,ConnCtx">
-  <dt><pre><span class="Keyword">proc</span> <a href="#monitorRemoveSubscriber%2Cstring%2CConnCtx"><span class="Identifier">monitorRemoveSubscriber</span></a><span class="Other">(</span><span class="Identifier">streamName</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">subConn</span><span class="Other">:</span> <a href="rtmpserver.html#ConnCtx"><span class="Identifier">ConnCtx</span></a><span class="Other">)</span> {.
+  <dt><pre><span class="Keyword">proc</span> <a href="#monitorRemoveSubscriber%2Cstring%2CConnCtx"><span class="Identifier">monitorRemoveSubscriber</span></a><span class="Other">(</span><span class="Identifier">streamName</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">subConn</span><span class="Other">:</span> <a href="#ConnCtx"><span class="Identifier">ConnCtx</span></a><span class="Other">)</span> {.
     <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
@@ -430,11 +426,12 @@
 </div>
 <div id="newRTMPServer-procs-all">
   <div id="newRTMPServer,RtmpServerSettings">
-  <dt><pre><span class="Keyword">proc</span> <a href="#newRTMPServer%2CRtmpServerSettings"><span class="Identifier">newRTMPServer</span></a><span class="Other">(</span><span class="Identifier">settings</span><span class="Other">:</span> <a href="rtmpserver.html#RtmpServerSettings"><span class="Identifier">RtmpServerSettings</span></a> <span class="Other">=</span> <a href="rtmpserver.html#RtmpServerSettings"><span class="Identifier">RtmpServerSettings</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">)</span><span class="Other">:</span> <a href="rtmpserver.html#RtmpServer"><span class="Identifier">RtmpServer</span></a> {.
-    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RTMPServerError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#newRTMPServer%2CRtmpServerSettings"><span class="Identifier">newRTMPServer</span></a><span class="Other">(</span><span class="Identifier">settings</span><span class="Other">:</span> <a href="#RtmpServerSettings"><span class="Identifier">RtmpServerSettings</span></a> <span class="Other">=</span> <a href="#RtmpServerSettings"><span class="Identifier">RtmpServerSettings</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">)</span><span class="Other">:</span> <a href="#RtmpServer"><span class="Identifier">RtmpServer</span></a> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">NetError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">TimeEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    Creates a new RTMP server instance with the specified settings. This initializes the event base and binds the REST API listener if enabled.
+    Creates a new RTMP server instance with the specified settings.
     
   </dd>
 </div>
@@ -442,13 +439,11 @@
 </div>
 <div id="startServer-procs-all">
   <div id="startServer,RtmpServer">
-  <dt><pre><span class="Keyword">proc</span> <a href="#startServer%2CRtmpServer"><span class="Identifier">startServer</span></a><span class="Other">(</span><span class="Identifier">server</span><span class="Other">:</span> <a href="rtmpserver.html#RtmpServer"><span class="Identifier">RtmpServer</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RTMPServerError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
-                                       <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#startServer%2CRtmpServer"><span class="Identifier">startServer</span></a><span class="Other">(</span><span class="Identifier">server</span><span class="Other">:</span> <a href="#RtmpServer"><span class="Identifier">RtmpServer</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">NetError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span>
+    <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">TimeEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    <p>Start RTMP server on specified port (default 1935)</p>
-<p>This is a blocking call that runs the event loop; it will not return until the server is stopped.</p>
-
+    Start RTMP server on specified port (default 1935) This is a blocking call that runs the event loop.
     
   </dd>
 </div>
@@ -464,7 +459,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-26 12:42:05 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-08-21 14:43:00 UTC</small>
       </div>
     </div>
   </div>

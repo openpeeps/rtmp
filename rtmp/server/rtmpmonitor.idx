@@ -1,8 +1,7 @@
 nimTitle	rtmpmonitor	rtmp/server/rtmpmonitor.html	module rtmp/server/rtmpmonitor		0
-nim	RtmpClient	rtmp/server/rtmpmonitor.html#RtmpClient	object RtmpClient		15
-nim	RtmpSubscriber	rtmp/server/rtmpmonitor.html#RtmpSubscriber	object RtmpSubscriber		22
-nim	RtmpPublisher	rtmp/server/rtmpmonitor.html#RtmpPublisher	object RtmpPublisher		27
-nim	RtmpStream	rtmp/server/rtmpmonitor.html#RtmpStream	object RtmpStream		32
-nim	RtmpMonitor	rtmp/server/rtmpmonitor.html#RtmpMonitor	type RtmpMonitor		42
-nim	gMonitor	rtmp/server/rtmpmonitor.html#gMonitor	var gMonitor		47
-nim	apiRequestCb	rtmp/server/rtmpmonitor.html#apiRequestCb,ptr.evhttp_request,pointer	proc apiRequestCb(req: ptr evhttp_request; arg: pointer)		62
+nim	RtmpClient	rtmp/server/rtmpmonitor.html#RtmpClient	object RtmpClient		13
+nim	RtmpSubscriber	rtmp/server/rtmpmonitor.html#RtmpSubscriber	object RtmpSubscriber		20
+nim	RtmpPublisher	rtmp/server/rtmpmonitor.html#RtmpPublisher	object RtmpPublisher		25
+nim	RtmpStream	rtmp/server/rtmpmonitor.html#RtmpStream	object RtmpStream		30
+nim	RtmpMonitor	rtmp/server/rtmpmonitor.html#RtmpMonitor	type RtmpMonitor		40
+nim	gMonitor	rtmp/server/rtmpmonitor.html#gMonitor	var gMonitor		45

@@ -9,22 +9,35 @@ nim	AMF0_ECMAArray	rtmp/server/actionmessage.html#AMF0_ECMAArray	AMF0Type.AMF0_E
 nim	AMF0_StrictArray	rtmp/server/actionmessage.html#AMF0_StrictArray	AMF0Type.AMF0_StrictArray		11
 nim	AMF0_LongString	rtmp/server/actionmessage.html#AMF0_LongString	AMF0Type.AMF0_LongString		11
 nim	AMF0Type	rtmp/server/actionmessage.html#AMF0Type	enum AMF0Type		11
-nim	AMF0Value	rtmp/server/actionmessage.html#AMF0Value	type AMF0Value		23
-nim	newNumber	rtmp/server/actionmessage.html#newNumber,float64	proc newNumber(v: float64): AMF0Value		48
-nim	newBoolean	rtmp/server/actionmessage.html#newBoolean,bool	proc newBoolean(v: bool): AMF0Value		51
-nim	newString	rtmp/server/actionmessage.html#newString,string	proc newString(v: string): AMF0Value		54
-nim	newNull	rtmp/server/actionmessage.html#newNull	proc newNull(): AMF0Value		57
-nim	newUndefined	rtmp/server/actionmessage.html#newUndefined	proc newUndefined(): AMF0Value		60
-nim	newObject	rtmp/server/actionmessage.html#newObject	proc newObject(): AMF0Value		63
-nim	newEcmaArray	rtmp/server/actionmessage.html#newEcmaArray	proc newEcmaArray(): AMF0Value		66
-nim	newStrictArray	rtmp/server/actionmessage.html#newStrictArray,seq[AMF0Value]	proc newStrictArray(items: seq[AMF0Value]): AMF0Value		69
-nim	amfObj	rtmp/server/actionmessage.html#amfObj,openArray[]	proc amfObj(pairs: openArray[(string, AMF0Value)]): AMF0Value		72
-nim	decodeOneAMF0	rtmp/server/actionmessage.html#decodeOneAMF0,seq[byte],int	proc decodeOneAMF0(data: seq[byte]; idx: var int): AMF0Value		126
-nim	decodeAllAMF0	rtmp/server/actionmessage.html#decodeAllAMF0,seq[byte]	proc decodeAllAMF0(data: seq[byte]): seq[AMF0Value]		206
-nim	decodeAllAMF0Seq	rtmp/server/actionmessage.html#decodeAllAMF0Seq,seq[byte]	proc decodeAllAMF0Seq(data: seq[byte]): seq[AMF0Value]		216
-nim	decodeOneAMF0	rtmp/server/actionmessage.html#decodeOneAMF0,ByteReader	proc decodeOneAMF0(r: var ByteReader): AMF0Value		310
-nim	decodeAllAMF0Ptr	rtmp/server/actionmessage.html#decodeAllAMF0Ptr,ptr.byte,int	proc decodeAllAMF0Ptr(data: ptr byte; dataLen: int): seq[AMF0Value]		418
-nim	encodeOneAMF0	rtmp/server/actionmessage.html#encodeOneAMF0,AMF0Value,seq[byte]	proc encodeOneAMF0(v: AMF0Value; outSeq: var seq[byte])		430
-nim	encodeAMF0Values	rtmp/server/actionmessage.html#encodeAMF0Values,seq[AMF0Value]	proc encodeAMF0Values(vals: seq[AMF0Value]): seq[byte]		484
-nim	amf0ToStr	rtmp/server/actionmessage.html#amf0ToStr,AMF0Value	proc amf0ToStr(v: AMF0Value): string		492
-nimgrp	decodeoneamf0	rtmp/server/actionmessage.html#decodeOneAMF0-procs-all	proc		126
+nim	AMF3_Undefined	rtmp/server/actionmessage.html#AMF3_Undefined	AMF3Type.AMF3_Undefined		23
+nim	AMF3_Null	rtmp/server/actionmessage.html#AMF3_Null	AMF3Type.AMF3_Null		23
+nim	AMF3_False	rtmp/server/actionmessage.html#AMF3_False	AMF3Type.AMF3_False		23
+nim	AMF3_True	rtmp/server/actionmessage.html#AMF3_True	AMF3Type.AMF3_True		23
+nim	AMF3_Integer	rtmp/server/actionmessage.html#AMF3_Integer	AMF3Type.AMF3_Integer		23
+nim	AMF3_Double	rtmp/server/actionmessage.html#AMF3_Double	AMF3Type.AMF3_Double		23
+nim	AMF3_String	rtmp/server/actionmessage.html#AMF3_String	AMF3Type.AMF3_String		23
+nim	AMF3_Object	rtmp/server/actionmessage.html#AMF3_Object	AMF3Type.AMF3_Object		23
+nim	AMF3_Array	rtmp/server/actionmessage.html#AMF3_Array	AMF3Type.AMF3_Array		23
+nim	AMF3_ByteArray	rtmp/server/actionmessage.html#AMF3_ByteArray	AMF3Type.AMF3_ByteArray		23
+nim	AMF3Type	rtmp/server/actionmessage.html#AMF3Type	enum AMF3Type		23
+nim	AMF0Value	rtmp/server/actionmessage.html#AMF0Value	type AMF0Value		36
+nim	newNumber	rtmp/server/actionmessage.html#newNumber,float64	proc newNumber(v: float64): AMF0Value		61
+nim	newBoolean	rtmp/server/actionmessage.html#newBoolean,bool	proc newBoolean(v: bool): AMF0Value		64
+nim	newString	rtmp/server/actionmessage.html#newString,string	proc newString(v: string): AMF0Value		67
+nim	newNull	rtmp/server/actionmessage.html#newNull	proc newNull(): AMF0Value		70
+nim	newUndefined	rtmp/server/actionmessage.html#newUndefined	proc newUndefined(): AMF0Value		73
+nim	newObject	rtmp/server/actionmessage.html#newObject	proc newObject(): AMF0Value		76
+nim	newEcmaArray	rtmp/server/actionmessage.html#newEcmaArray	proc newEcmaArray(): AMF0Value		79
+nim	newStrictArray	rtmp/server/actionmessage.html#newStrictArray,seq[AMF0Value]	proc newStrictArray(items: seq[AMF0Value]): AMF0Value		82
+nim	amfObj	rtmp/server/actionmessage.html#amfObj,openArray[]	proc amfObj(pairs: openArray[(string, AMF0Value)]): AMF0Value		85
+nim	decodeOneAMF0	rtmp/server/actionmessage.html#decodeOneAMF0,seq[byte],int	proc decodeOneAMF0(data: seq[byte]; idx: var int): AMF0Value		169
+nim	decodeAllAMF0	rtmp/server/actionmessage.html#decodeAllAMF0,seq[byte]	proc decodeAllAMF0(data: seq[byte]): seq[AMF0Value]		249
+nim	decodeAllAMF0Seq	rtmp/server/actionmessage.html#decodeAllAMF0Seq,seq[byte]	proc decodeAllAMF0Seq(data: seq[byte]): seq[AMF0Value]		259
+nim	decodeOneAMF3	rtmp/server/actionmessage.html#decodeOneAMF3,seq[byte],int	proc decodeOneAMF3(data: seq[byte]; idx: var int): AMF0Value		265
+nim	decodeAllAMF3	rtmp/server/actionmessage.html#decodeAllAMF3,seq[byte]	proc decodeAllAMF3(data: seq[byte]): seq[AMF0Value]		330
+nim	decodeOneAMF0	rtmp/server/actionmessage.html#decodeOneAMF0,ByteReader	proc decodeOneAMF0(r: var ByteReader): AMF0Value		430
+nim	decodeAllAMF0Ptr	rtmp/server/actionmessage.html#decodeAllAMF0Ptr,ptr.byte,int	proc decodeAllAMF0Ptr(data: ptr byte; dataLen: int): seq[AMF0Value]		538
+nim	encodeOneAMF0	rtmp/server/actionmessage.html#encodeOneAMF0,AMF0Value,seq[byte]	proc encodeOneAMF0(v: AMF0Value; outSeq: var seq[byte])		550
+nim	encodeAMF0Values	rtmp/server/actionmessage.html#encodeAMF0Values,seq[AMF0Value]	proc encodeAMF0Values(vals: seq[AMF0Value]): seq[byte]		604
+nim	amf0ToStr	rtmp/server/actionmessage.html#amf0ToStr,AMF0Value	proc amf0ToStr(v: AMF0Value): string		612
+nimgrp	decodeoneamf0	rtmp/server/actionmessage.html#decodeOneAMF0-procs-all	proc		169

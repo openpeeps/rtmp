@@ -16,16 +16,19 @@
 <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAA3XAAAN1wFCKJt4AAAAB3RJTUUH4QQQEwksSS9ZWwAAAk1JREFUWMPtll2ITVEUx39nn/O7Y5qR8f05wtCUUr6ZIS++8pEnkZInPImneaCQ5METNdOkeFBKUhMPRIkHKfEuUZSUlGlKPN2TrgfncpvmnntnmlEyq1Z7t89/rf9a6+y99oZxGZf/XeIq61EdtgKXgdXA0xrYAvBjOIF1AI9zvjcC74BSpndrJPkBWDScTF8Aa4E3wDlgHbASaANmVqlcCnwHvgDvgVfAJ+AikAAvgfVZwLnSVZHZaOuKoQi3ZOMi4NkYkpe1p4J7A8BpYAD49hfIy/oqG0+hLomiKP2L5L+1ubn5115S+3OAn4EnwBlgMzCjyt6ZAnQCJ4A7wOs88iRJHvw50HoujuPBoCKwHWiosy8MdfZnAdcHk8dxXFJ3VQbQlCTJvRBCGdRbD4M6uc5glpY3eAihpN5S5w12diSEcCCEcKUO4ljdr15T76ur1FDDLIQQ3qv71EdDOe3Kxj3leRXyk+pxdWnFWod6Wt2bY3de3aSuUHcPBVimHs7mK9WrmeOF6lR1o9qnzskh2ar2qm1qizpfXaPeVGdlmGN5pb09qMxz1Xb1kLqgzn1RyH7JUXW52lr5e/Kqi9qpto7V1atuUzfnARrV7jEib1T76gG2qxdGmXyiekkt1GswPTtek0aBfJp6YySGBfWg2tPQ0FAYgf1stUfdmdcjarbYJEniKIq6gY/Aw+zWHAC+p2labGpqiorFYgGYCEzN7oQdQClN07O1/EfDyGgC0ALMBdYAi4FyK+4H3gLPsxfR1zRNi+NP7nH5J+QntnXe5B5mpfQAAAAASUVORK5CYII=">
 
 <!-- CSS -->
-<link rel="stylesheet" type="text/css" href="nimdoc.out.css?v=2.2.8">
+<link rel="stylesheet" type="text/css" href="nimdoc.out.css?v=2.2.10">
 
 <!-- JS -->
-<script type="text/javascript" src="dochack.js?v=2.2.8"></script>
+<script type="text/javascript" src="dochack.js?v=2.2.10"></script>
 </head>
 <body>
   <div class="document" id="documentId">
+    <input type="checkbox" id="nav-toggle" hidden>
+    <label for="nav-toggle" id="nav-burger">&#9776;</label>
+    <label for="nav-toggle" id="nav-overlay"></label>
     <div class="container">
       <h1 class="title">Index</h1>
-      Modules: <a href="index.html">rtmp</a>, <a href="rtmp/private/memutils.html">rtmp/private/memutils</a>, <a href="rtmp/rtmpclient.html">rtmp/rtmpclient</a>, <a href="rtmp/rtmpplaylist.html">rtmp/rtmpplaylist</a>, <a href="rtmp/rtmpserver.html">rtmp/rtmpserver</a>, <a href="rtmp/server/actionmessage.html">rtmp/server/actionmessage</a>, <a href="rtmp/server/chunkstream.html">rtmp/server/chunkstream</a>, <a href="rtmp/server/rtmpmonitor.html">rtmp/server/rtmpmonitor</a>.<br/><p /><h2>API symbols</h2>
+      Modules: <a href="index.html">rtmp</a>, <a href="rtmp/private/memutils.html">rtmp/private/memutils</a>, <a href="rtmp/private/openssl_hmac.html">rtmp/private/openssl_hmac</a>, <a href="rtmp/rtmpclient.html">rtmp/rtmpclient</a>, <a href="rtmp/rtmpplaylist.html">rtmp/rtmpplaylist</a>, <a href="rtmp/rtmpserver.html">rtmp/rtmpserver</a>, <a href="rtmp/server/actionmessage.html">rtmp/server/actionmessage</a>, <a href="rtmp/server/chunkstream.html">rtmp/server/chunkstream</a>, <a href="rtmp/server/handshake.html">rtmp/server/handshake</a>, <a href="rtmp/server/rtmpmonitor.html">rtmp/server/rtmpmonitor</a>.<br/><p /><h2>API symbols</h2>
 <dl><dt><a name="AacStreamState" href="#AacStreamState"><span>AacStreamState:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpclient: type AacStreamState" href="rtmp/rtmpclient.html#AacStreamState">rtmpclient: type AacStreamState</a></li>
@@ -78,13 +81,57 @@
 <li><a class="reference external"
           data-doc-search-tag="actionmessage: type AMF0Value" href="rtmp/server/actionmessage.html#AMF0Value">actionmessage: type AMF0Value</a></li>
           </ul></dd>
+<dt><a name="AMF3_Array" href="#AMF3_Array"><span>AMF3_Array:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="actionmessage: AMF3Type.AMF3_Array" href="rtmp/server/actionmessage.html#AMF3_Array">actionmessage: AMF3Type.AMF3_Array</a></li>
+          </ul></dd>
+<dt><a name="AMF3_ByteArray" href="#AMF3_ByteArray"><span>AMF3_ByteArray:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="actionmessage: AMF3Type.AMF3_ByteArray" href="rtmp/server/actionmessage.html#AMF3_ByteArray">actionmessage: AMF3Type.AMF3_ByteArray</a></li>
+          </ul></dd>
+<dt><a name="AMF3_Double" href="#AMF3_Double"><span>AMF3_Double:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="actionmessage: AMF3Type.AMF3_Double" href="rtmp/server/actionmessage.html#AMF3_Double">actionmessage: AMF3Type.AMF3_Double</a></li>
+          </ul></dd>
+<dt><a name="AMF3_False" href="#AMF3_False"><span>AMF3_False:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="actionmessage: AMF3Type.AMF3_False" href="rtmp/server/actionmessage.html#AMF3_False">actionmessage: AMF3Type.AMF3_False</a></li>
+          </ul></dd>
+<dt><a name="AMF3_Integer" href="#AMF3_Integer"><span>AMF3_Integer:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="actionmessage: AMF3Type.AMF3_Integer" href="rtmp/server/actionmessage.html#AMF3_Integer">actionmessage: AMF3Type.AMF3_Integer</a></li>
+          </ul></dd>
+<dt><a name="AMF3_Null" href="#AMF3_Null"><span>AMF3_Null:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="actionmessage: AMF3Type.AMF3_Null" href="rtmp/server/actionmessage.html#AMF3_Null">actionmessage: AMF3Type.AMF3_Null</a></li>
+          </ul></dd>
+<dt><a name="AMF3_Object" href="#AMF3_Object"><span>AMF3_Object:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="actionmessage: AMF3Type.AMF3_Object" href="rtmp/server/actionmessage.html#AMF3_Object">actionmessage: AMF3Type.AMF3_Object</a></li>
+          </ul></dd>
+<dt><a name="AMF3_String" href="#AMF3_String"><span>AMF3_String:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="actionmessage: AMF3Type.AMF3_String" href="rtmp/server/actionmessage.html#AMF3_String">actionmessage: AMF3Type.AMF3_String</a></li>
+          </ul></dd>
+<dt><a name="AMF3_True" href="#AMF3_True"><span>AMF3_True:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="actionmessage: AMF3Type.AMF3_True" href="rtmp/server/actionmessage.html#AMF3_True">actionmessage: AMF3Type.AMF3_True</a></li>
+          </ul></dd>
+<dt><a name="AMF3Type" href="#AMF3Type"><span>AMF3Type:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="actionmessage: enum AMF3Type" href="rtmp/server/actionmessage.html#AMF3Type">actionmessage: enum AMF3Type</a></li>
+          </ul></dd>
+<dt><a name="AMF3_Undefined" href="#AMF3_Undefined"><span>AMF3_Undefined:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="actionmessage: AMF3Type.AMF3_Undefined" href="rtmp/server/actionmessage.html#AMF3_Undefined">actionmessage: AMF3Type.AMF3_Undefined</a></li>
+          </ul></dd>
 <dt><a name="amfObj" href="#amfObj"><span>amfObj:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="actionmessage: proc amfObj(pairs: openArray[(string, AMF0Value)]): AMF0Value" href="rtmp/server/actionmessage.html#amfObj%2CopenArray%5B%5D">actionmessage: proc amfObj(pairs: openArray[(string, AMF0Value)]): AMF0Value</a></li>
           </ul></dd>
-<dt><a name="apiRequestCb" href="#apiRequestCb"><span>apiRequestCb:</span></a></dt><dd><ul class="simple">
+<dt><a name="apiRequestHandler" href="#apiRequestHandler"><span>apiRequestHandler:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rtmpmonitor: proc apiRequestCb(req: ptr evhttp_request; arg: pointer)" href="rtmp/server/rtmpmonitor.html#apiRequestCb%2Cptr.evhttp_request%2Cpointer">rtmpmonitor: proc apiRequestCb(req: ptr evhttp_request; arg: pointer)</a></li>
+          data-doc-search-tag="rtmpserver: proc apiRequestHandler(req: HttpRequest; res: HttpResponse)" href="rtmp/rtmpserver.html#apiRequestHandler%2CHttpRequest%2CHttpResponse">rtmpserver: proc apiRequestHandler(req: HttpRequest; res: HttpResponse)</a></li>
           </ul></dd>
 <dt><a name="ChunkHeader" href="#ChunkHeader"><span>ChunkHeader:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -112,6 +159,14 @@
 <li><a class="reference external"
           data-doc-search-tag="rtmpclient: enum ConnStage" href="rtmp/rtmpclient.html#ConnStage">rtmpclient: enum ConnStage</a></li>
           </ul></dd>
+<dt><a name="createC1Enhanced" href="#createC1Enhanced"><span>createC1Enhanced:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="handshake: proc createC1Enhanced(c1: ptr UncheckedArray[byte])" href="rtmp/server/handshake.html#createC1Enhanced%2Cptr.UncheckedArray%5Bbyte%5D">handshake: proc createC1Enhanced(c1: ptr UncheckedArray[byte])</a></li>
+          </ul></dd>
+<dt><a name="createS1Enhanced" href="#createS1Enhanced"><span>createS1Enhanced:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="handshake: proc createS1Enhanced(s1: ptr UncheckedArray[byte])" href="rtmp/server/handshake.html#createS1Enhanced%2Cptr.UncheckedArray%5Bbyte%5D">handshake: proc createS1Enhanced(s1: ptr UncheckedArray[byte])</a></li>
+          </ul></dd>
 <dt><a name="decodeAllAMF0" href="#decodeAllAMF0"><span>decodeAllAMF0:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="actionmessage: proc decodeAllAMF0(data: seq[byte]): seq[AMF0Value]" href="rtmp/server/actionmessage.html#decodeAllAMF0%2Cseq%5Bbyte%5D">actionmessage: proc decodeAllAMF0(data: seq[byte]): seq[AMF0Value]</a></li>
@@ -124,11 +179,19 @@
 <li><a class="reference external"
           data-doc-search-tag="actionmessage: proc decodeAllAMF0Seq(data: seq[byte]): seq[AMF0Value]" href="rtmp/server/actionmessage.html#decodeAllAMF0Seq%2Cseq%5Bbyte%5D">actionmessage: proc decodeAllAMF0Seq(data: seq[byte]): seq[AMF0Value]</a></li>
           </ul></dd>
+<dt><a name="decodeAllAMF3" href="#decodeAllAMF3"><span>decodeAllAMF3:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="actionmessage: proc decodeAllAMF3(data: seq[byte]): seq[AMF0Value]" href="rtmp/server/actionmessage.html#decodeAllAMF3%2Cseq%5Bbyte%5D">actionmessage: proc decodeAllAMF3(data: seq[byte]): seq[AMF0Value]</a></li>
+          </ul></dd>
 <dt><a name="decodeOneAMF0" href="#decodeOneAMF0"><span>decodeOneAMF0:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="actionmessage: proc decodeOneAMF0(r: var ByteReader): AMF0Value" href="rtmp/server/actionmessage.html#decodeOneAMF0%2CByteReader">actionmessage: proc decodeOneAMF0(r: var ByteReader): AMF0Value</a></li>
           <li><a class="reference external"
           data-doc-search-tag="actionmessage: proc decodeOneAMF0(data: seq[byte]; idx: var int): AMF0Value" href="rtmp/server/actionmessage.html#decodeOneAMF0%2Cseq%5Bbyte%5D%2Cint">actionmessage: proc decodeOneAMF0(data: seq[byte]; idx: var int): AMF0Value</a></li>
+          </ul></dd>
+<dt><a name="decodeOneAMF3" href="#decodeOneAMF3"><span>decodeOneAMF3:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="actionmessage: proc decodeOneAMF3(data: seq[byte]; idx: var int): AMF0Value" href="rtmp/server/actionmessage.html#decodeOneAMF3%2Cseq%5Bbyte%5D%2Cint">actionmessage: proc decodeOneAMF3(data: seq[byte]; idx: var int): AMF0Value</a></li>
           </ul></dd>
 <dt><a name="DEFAULT_RTMP_PORT" href="#DEFAULT_RTMP_PORT"><span>DEFAULT_RTMP_PORT:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -142,6 +205,18 @@
 <li><a class="reference external"
           data-doc-search-tag="actionmessage: proc encodeOneAMF0(v: AMF0Value; outSeq: var seq[byte])" href="rtmp/server/actionmessage.html#encodeOneAMF0%2CAMF0Value%2Cseq%5Bbyte%5D">actionmessage: proc encodeOneAMF0(v: AMF0Value; outSeq: var seq[byte])</a></li>
           </ul></dd>
+<dt><a name="EvpMd" href="#EvpMd"><span>EvpMd:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="openssl_hmac: type EvpMd" href="rtmp/private/openssl_hmac.html#EvpMd">openssl_hmac: type EvpMd</a></li>
+          </ul></dd>
+<dt><a name="EvpMdCtx" href="#EvpMdCtx"><span>EvpMdCtx:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="openssl_hmac: type EvpMdCtx" href="rtmp/private/openssl_hmac.html#EvpMdCtx">openssl_hmac: type EvpMdCtx</a></li>
+          </ul></dd>
+<dt><a name="EVP_sha256" href="#EVP_sha256"><span>EVP_sha256:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="openssl_hmac: proc EVP_sha256(): EvpMd" href="rtmp/private/openssl_hmac.html#EVP_sha256">openssl_hmac: proc EVP_sha256(): EvpMd</a></li>
+          </ul></dd>
 <dt><a name="feedBytes" href="#feedBytes"><span>feedBytes:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="chunkstream: proc feedBytes(ctx: ChunkStreamCtx; data: ptr byte; len: int): int" href="rtmp/server/chunkstream.html#feedBytes%2CChunkStreamCtx%2Cptr.byte%2Cint">chunkstream: proc feedBytes(ctx: ChunkStreamCtx; data: ptr byte; len: int): int</a></li>
@@ -150,9 +225,47 @@
 <li><a class="reference external"
           data-doc-search-tag="memutils: template freemem(x: untyped)" href="rtmp/private/memutils.html#freemem.t%2Cuntyped">memutils: template freemem(x: untyped)</a></li>
           </ul></dd>
+<dt><a name="GenuineFMSKey" href="#GenuineFMSKey"><span>GenuineFMSKey:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="handshake: const GenuineFMSKey" href="rtmp/server/handshake.html#GenuineFMSKey">handshake: const GenuineFMSKey</a></li>
+          </ul></dd>
+<dt><a name="GenuineFPKey" href="#GenuineFPKey"><span>GenuineFPKey:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="handshake: const GenuineFPKey" href="rtmp/server/handshake.html#GenuineFPKey">handshake: const GenuineFPKey</a></li>
+          </ul></dd>
 <dt><a name="gMonitor" href="#gMonitor"><span>gMonitor:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpmonitor: var gMonitor" href="rtmp/server/rtmpmonitor.html#gMonitor">rtmpmonitor: var gMonitor</a></li>
+          </ul></dd>
+<dt><a name="HMAC" href="#HMAC"><span>HMAC:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="openssl_hmac: proc HMAC(md: EvpMd; key: pointer; keyLen: cint; data: pointer; dataLen: csize_t;
+     output: pointer; outputLen: ptr cuint): pointer" href="rtmp/private/openssl_hmac.html#HMAC%2CEvpMd%2Cpointer%2Ccint%2Cpointer%2Ccsize_t%2Cpointer%2Cptr.cuint">openssl_hmac: proc HMAC(md: EvpMd; key: pointer; keyLen: cint; data: pointer; dataLen: csize_t;
+     output: pointer; outputLen: ptr cuint): pointer</a></li>
+          </ul></dd>
+<dt><a name="HMACCtx" href="#HMACCtx"><span>HMACCtx:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="openssl_hmac: type HMACCtx" href="rtmp/private/openssl_hmac.html#HMACCtx">openssl_hmac: type HMACCtx</a></li>
+          </ul></dd>
+<dt><a name="HMAC_CTX_free" href="#HMAC_CTX_free"><span>HMAC_CTX_free:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="openssl_hmac: proc HMAC_CTX_free(ctx: HMACCtx)" href="rtmp/private/openssl_hmac.html#HMAC_CTX_free%2CHMACCtx">openssl_hmac: proc HMAC_CTX_free(ctx: HMACCtx)</a></li>
+          </ul></dd>
+<dt><a name="HMAC_CTX_new" href="#HMAC_CTX_new"><span>HMAC_CTX_new:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="openssl_hmac: proc HMAC_CTX_new(): HMACCtx" href="rtmp/private/openssl_hmac.html#HMAC_CTX_new">openssl_hmac: proc HMAC_CTX_new(): HMACCtx</a></li>
+          </ul></dd>
+<dt><a name="HMAC_Final" href="#HMAC_Final"><span>HMAC_Final:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="openssl_hmac: proc HMAC_Final(ctx: HMACCtx; output: pointer; outputLen: ptr cuint): cint" href="rtmp/private/openssl_hmac.html#HMAC_Final%2CHMACCtx%2Cpointer%2Cptr.cuint">openssl_hmac: proc HMAC_Final(ctx: HMACCtx; output: pointer; outputLen: ptr cuint): cint</a></li>
+          </ul></dd>
+<dt><a name="HMAC_Init_ex" href="#HMAC_Init_ex"><span>HMAC_Init_ex:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="openssl_hmac: proc HMAC_Init_ex(ctx: HMACCtx; key: pointer; keyLen: cint; md: EvpMd; impl: pointer): cint" href="rtmp/private/openssl_hmac.html#HMAC_Init_ex%2CHMACCtx%2Cpointer%2Ccint%2CEvpMd%2Cpointer">openssl_hmac: proc HMAC_Init_ex(ctx: HMACCtx; key: pointer; keyLen: cint; md: EvpMd; impl: pointer): cint</a></li>
+          </ul></dd>
+<dt><a name="HMAC_Update" href="#HMAC_Update"><span>HMAC_Update:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="openssl_hmac: proc HMAC_Update(ctx: HMACCtx; data: pointer; dataLen: csize_t): cint" href="rtmp/private/openssl_hmac.html#HMAC_Update%2CHMACCtx%2Cpointer%2Ccsize_t">openssl_hmac: proc HMAC_Update(ctx: HMACCtx; data: pointer; dataLen: csize_t): cint</a></li>
           </ul></dd>
 <dt><a name="hsDone" href="#hsDone"><span>hsDone:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -185,6 +298,14 @@
 <dt><a name="initChunkStreamCtx" href="#initChunkStreamCtx"><span>initChunkStreamCtx:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="chunkstream: proc initChunkStreamCtx(peerChunkSize: int = 128): ChunkStreamCtx" href="rtmp/server/chunkstream.html#initChunkStreamCtx%2Cint">chunkstream: proc initChunkStreamCtx(peerChunkSize: int = 128): ChunkStreamCtx</a></li>
+          </ul></dd>
+<dt><a name="isEnhancedC1" href="#isEnhancedC1"><span>isEnhancedC1:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="handshake: proc isEnhancedC1(c1: ptr UncheckedArray[byte]): bool" href="rtmp/server/handshake.html#isEnhancedC1%2Cptr.UncheckedArray%5Bbyte%5D">handshake: proc isEnhancedC1(c1: ptr UncheckedArray[byte]): bool</a></li>
+          </ul></dd>
+<dt><a name="isEnhancedS1" href="#isEnhancedS1"><span>isEnhancedS1:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="handshake: proc isEnhancedS1(s1: ptr UncheckedArray[byte]): bool" href="rtmp/server/handshake.html#isEnhancedS1%2Cptr.UncheckedArray%5Bbyte%5D">handshake: proc isEnhancedS1(s1: ptr UncheckedArray[byte]): bool</a></li>
           </ul></dd>
 <dt><a name="loadPlaylist" href="#loadPlaylist"><span>loadPlaylist:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -262,10 +383,6 @@
 <li><a class="reference external"
           data-doc-search-tag="rtmpplaylist: proc nextVideo(ps: PlaylistState): string" href="rtmp/rtmpplaylist.html#nextVideo%2CPlaylistState">rtmpplaylist: proc nextVideo(ps: PlaylistState): string</a></li>
           </ul></dd>
-<dt><a name="onEvent" href="#onEvent"><span>onEvent:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="rtmpclient: proc onEvent(bev: ptr bufferevent; what: cshort; ctx: pointer)" href="rtmp/rtmpclient.html#onEvent%2Cptr.bufferevent%2Ccshort%2Cpointer">rtmpclient: proc onEvent(bev: ptr bufferevent; what: cshort; ctx: pointer)</a></li>
-          </ul></dd>
 <dt><a name="PlaylistState" href="#PlaylistState"><span>PlaylistState:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpplaylist: type PlaylistState" href="rtmp/rtmpplaylist.html#PlaylistState">rtmpplaylist: type PlaylistState</a></li>
@@ -291,6 +408,8 @@
 <dt><a name="RTMP_HANDSHAKE_SIZE" href="#RTMP_HANDSHAKE_SIZE"><span>RTMP_HANDSHAKE_SIZE:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpserver: const RTMP_HANDSHAKE_SIZE" href="rtmp/rtmpserver.html#RTMP_HANDSHAKE_SIZE">rtmpserver: const RTMP_HANDSHAKE_SIZE</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="handshake: const RTMP_HANDSHAKE_SIZE" href="rtmp/server/handshake.html#RTMP_HANDSHAKE_SIZE">handshake: const RTMP_HANDSHAKE_SIZE</a></li>
           </ul></dd>
 <dt><a name="RtmpHandshakeState" href="#RtmpHandshakeState"><span>RtmpHandshakeState:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -335,6 +454,14 @@
 <dt><a name="setPeerChunkSize" href="#setPeerChunkSize"><span>setPeerChunkSize:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="chunkstream: proc setPeerChunkSize(ctx: ChunkStreamCtx; size: int)" href="rtmp/server/chunkstream.html#setPeerChunkSize%2CChunkStreamCtx%2Cint">chunkstream: proc setPeerChunkSize(ctx: ChunkStreamCtx; size: int)</a></li>
+          </ul></dd>
+<dt><a name="signC2" href="#signC2"><span>signC2:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="handshake: proc signC2(c2: ptr UncheckedArray[byte]; s1: ptr UncheckedArray[byte])" href="rtmp/server/handshake.html#signC2%2Cptr.UncheckedArray%5Bbyte%5D%2Cptr.UncheckedArray%5Bbyte%5D">handshake: proc signC2(c2: ptr UncheckedArray[byte]; s1: ptr UncheckedArray[byte])</a></li>
+          </ul></dd>
+<dt><a name="signS2" href="#signS2"><span>signS2:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="handshake: proc signS2(s2: ptr UncheckedArray[byte]; c1: ptr UncheckedArray[byte])" href="rtmp/server/handshake.html#signS2%2Cptr.UncheckedArray%5Bbyte%5D%2Cptr.UncheckedArray%5Bbyte%5D">handshake: proc signS2(s2: ptr UncheckedArray[byte]; c1: ptr UncheckedArray[byte])</a></li>
           </ul></dd>
 <dt><a name="startPacer" href="#startPacer"><span>startPacer:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -416,11 +543,27 @@
 <li><a class="reference external"
           data-doc-search-tag="rtmpserver: object SubscriberEntry" href="rtmp/rtmpserver.html#SubscriberEntry">rtmpserver: object SubscriberEntry</a></li>
           </ul></dd>
+<dt><a name="validateC1Digest" href="#validateC1Digest"><span>validateC1Digest:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="handshake: proc validateC1Digest(c1: ptr UncheckedArray[byte]): bool" href="rtmp/server/handshake.html#validateC1Digest%2Cptr.UncheckedArray%5Bbyte%5D">handshake: proc validateC1Digest(c1: ptr UncheckedArray[byte]): bool</a></li>
+          </ul></dd>
+<dt><a name="validateC2" href="#validateC2"><span>validateC2:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="handshake: proc validateC2(c2: ptr UncheckedArray[byte]; s1: ptr UncheckedArray[byte]): bool" href="rtmp/server/handshake.html#validateC2%2Cptr.UncheckedArray%5Bbyte%5D%2Cptr.UncheckedArray%5Bbyte%5D">handshake: proc validateC2(c2: ptr UncheckedArray[byte]; s1: ptr UncheckedArray[byte]): bool</a></li>
+          </ul></dd>
+<dt><a name="validateS1Digest" href="#validateS1Digest"><span>validateS1Digest:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="handshake: proc validateS1Digest(s1: ptr UncheckedArray[byte]): bool" href="rtmp/server/handshake.html#validateS1Digest%2Cptr.UncheckedArray%5Bbyte%5D">handshake: proc validateS1Digest(s1: ptr UncheckedArray[byte]): bool</a></li>
+          </ul></dd>
+<dt><a name="validateS2" href="#validateS2"><span>validateS2:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="handshake: proc validateS2(s2: ptr UncheckedArray[byte]; c1: ptr UncheckedArray[byte]): bool" href="rtmp/server/handshake.html#validateS2%2Cptr.UncheckedArray%5Bbyte%5D%2Cptr.UncheckedArray%5Bbyte%5D">handshake: proc validateS2(s2: ptr UncheckedArray[byte]; c1: ptr UncheckedArray[byte]): bool</a></li>
+          </ul></dd>
 </dl>
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-26 12:42:05 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-08-21 14:43:00 UTC</small>
       </div>
     </div>
   </div>

@@ -16,13 +16,16 @@
 <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAA3XAAAN1wFCKJt4AAAAB3RJTUUH4QQQEwksSS9ZWwAAAk1JREFUWMPtll2ITVEUx39nn/O7Y5qR8f05wtCUUr6ZIS++8pEnkZInPImneaCQ5METNdOkeFBKUhMPRIkHKfEuUZSUlGlKPN2TrgfncpvmnntnmlEyq1Z7t89/rf9a6+y99oZxGZf/XeIq61EdtgKXgdXA0xrYAvBjOIF1AI9zvjcC74BSpndrJPkBWDScTF8Aa4E3wDlgHbASaANmVqlcCnwHvgDvgVfAJ+AikAAvgfVZwLnSVZHZaOuKoQi3ZOMi4NkYkpe1p4J7A8BpYAD49hfIy/oqG0+hLomiKP2L5L+1ubn5115S+3OAn4EnwBlgMzCjyt6ZAnQCJ4A7wOs88iRJHvw50HoujuPBoCKwHWiosy8MdfZnAdcHk8dxXFJ3VQbQlCTJvRBCGdRbD4M6uc5glpY3eAihpN5S5w12diSEcCCEcKUO4ljdr15T76ur1FDDLIQQ3qv71EdDOe3Kxj3leRXyk+pxdWnFWod6Wt2bY3de3aSuUHcPBVimHs7mK9WrmeOF6lR1o9qnzskh2ar2qm1qizpfXaPeVGdlmGN5pb09qMxz1Xb1kLqgzn1RyH7JUXW52lr5e/Kqi9qpto7V1atuUzfnARrV7jEib1T76gG2qxdGmXyiekkt1GswPTtek0aBfJp6YySGBfWg2tPQ0FAYgf1stUfdmdcjarbYJEniKIq6gY/Aw+zWHAC+p2labGpqiorFYgGYCEzN7oQdQClN07O1/EfDyGgC0ALMBdYAi4FyK+4H3gLPsxfR1zRNi+NP7nH5J+QntnXe5B5mpfQAAAAASUVORK5CYII=">
 
 <!-- CSS -->
-<link rel="stylesheet" type="text/css" href="../../nimdoc.out.css?v=2.2.8">
+<link rel="stylesheet" type="text/css" href="../../nimdoc.out.css?v=2.2.10">
 
 <!-- JS -->
-<script type="text/javascript" src="../../dochack.js?v=2.2.8"></script>
+<script type="text/javascript" src="../../dochack.js?v=2.2.10"></script>
 </head>
 <body>
   <div class="document" id="documentId">
+    <input type="checkbox" id="nav-toggle" hidden>
+    <label for="nav-toggle" id="nav-burger">&#9776;</label>
+    <label for="nav-toggle" id="nav-overlay"></label>
     <div class="container">
       <h1 class="title">rtmp/server/actionmessage</h1>
       <div class="row">
@@ -73,6 +76,10 @@
     arr*: seq[AMF0Value]     ## For AMF0_StrictArray type, holds a sequence of AMF0 values.
   of AMF0_Null, AMF0_Undefined:
     nil">AMF0Value</a></li>
+<li><a class="reference" href="#AMF3Type" title="AMF3Type = enum
+  AMF3_Undefined = 0, AMF3_Null = 1, AMF3_False = 2, AMF3_True = 3,
+  AMF3_Integer = 4, AMF3_Double = 5, AMF3_String = 6, AMF3_Object = 8,
+  AMF3_Array = 9, AMF3_ByteArray = 12">AMF3Type</a></li>
 
     </ul>
   </details>
@@ -101,9 +108,17 @@
   <li><a class="reference" href="#decodeAllAMF0Seq%2Cseq%5Bbyte%5D" title="decodeAllAMF0Seq(data: seq[byte]): seq[AMF0Value]">decodeAllAMF0Seq(data: seq[byte]): seq[AMF0Value]</a></li>
 
 </ul>
+<ul class="simple nested-toc-section">decodeAllAMF3
+  <li><a class="reference" href="#decodeAllAMF3%2Cseq%5Bbyte%5D" title="decodeAllAMF3(data: seq[byte]): seq[AMF0Value]">decodeAllAMF3(data: seq[byte]): seq[AMF0Value]</a></li>
+
+</ul>
 <ul class="simple nested-toc-section">decodeOneAMF0
   <li><a class="reference" href="#decodeOneAMF0%2Cseq%5Bbyte%5D%2Cint" title="decodeOneAMF0(data: seq[byte]; idx: var int): AMF0Value">decodeOneAMF0(data: seq[byte]; idx: var int): AMF0Value</a></li>
 <li><a class="reference" href="#decodeOneAMF0%2CByteReader" title="decodeOneAMF0(r: var ByteReader): AMF0Value">decodeOneAMF0(r: var ByteReader): AMF0Value</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">decodeOneAMF3
+  <li><a class="reference" href="#decodeOneAMF3%2Cseq%5Bbyte%5D%2Cint" title="decodeOneAMF3(data: seq[byte]; idx: var int): AMF0Value">decodeOneAMF3(data: seq[byte]; idx: var int): AMF0Value</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">encodeAMF0Values
@@ -163,19 +178,19 @@
   <h1><a class="toc-backref" href="#7">Types</a></h1>
   <dl class="item">
     <div id="AMF0Type">
-  <dt><pre><a href="actionmessage.html#AMF0Type"><span class="Identifier">AMF0Type</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
+  <dt><pre><a href="#AMF0Type"><span class="Identifier">AMF0Type</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
   <span class="Identifier">AMF0_Number</span> <span class="Other">=</span> <span class="DecNumber">0</span><span class="Other">,</span> <span class="Identifier">AMF0_Boolean</span> <span class="Other">=</span> <span class="DecNumber">1</span><span class="Other">,</span> <span class="Identifier">AMF0_String</span> <span class="Other">=</span> <span class="DecNumber">2</span><span class="Other">,</span> <span class="Identifier">AMF0_Object</span> <span class="Other">=</span> <span class="DecNumber">3</span><span class="Other">,</span>
   <span class="Identifier">AMF0_Null</span> <span class="Other">=</span> <span class="DecNumber">5</span><span class="Other">,</span> <span class="Identifier">AMF0_Undefined</span> <span class="Other">=</span> <span class="DecNumber">6</span><span class="Other">,</span> <span class="Identifier">AMF0_ECMAArray</span> <span class="Other">=</span> <span class="DecNumber">8</span><span class="Other">,</span> <span class="Identifier">AMF0_StrictArray</span> <span class="Other">=</span> <span class="DecNumber">10</span><span class="Other">,</span>
   <span class="Identifier">AMF0_LongString</span> <span class="Other">=</span> <span class="DecNumber">12</span></pre></dt>
   <dd>
     
-    AMF0 data types as defined in the RTMP specification. Used for encoding/decoding action message payloads.
+    AMF0 data types as defined in the RTMP specification.
     
   </dd>
 </div>
 <div id="AMF0Value">
-  <dt><pre><a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
-  <span class="Keyword">case</span> <span class="Identifier">typ</span><span class="Operator">*</span><span class="Other">:</span> <a href="actionmessage.html#AMF0Type"><span class="Identifier">AMF0Type</span></a>        <span class="Comment">## The type of the AMF0 value, determines which field is valid.</span>
+  <dt><pre><a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <span class="Keyword">case</span> <span class="Identifier">typ</span><span class="Operator">*</span><span class="Other">:</span> <a href="#AMF0Type"><span class="Identifier">AMF0Type</span></a>        <span class="Comment">## The type of the AMF0 value, determines which field is valid.</span>
   <span class="Keyword">of</span> <span class="Identifier">AMF0_Number</span><span class="Other">:</span>
     <span class="Identifier">num</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float64</span>            <span class="Comment">## For AMF0_Number type, holds the numeric value.</span>
   <span class="Keyword">of</span> <span class="Identifier">AMF0_Boolean</span><span class="Other">:</span>
@@ -183,14 +198,25 @@
   <span class="Keyword">of</span> <span class="Identifier">AMF0_String</span><span class="Other">,</span> <span class="Identifier">AMF0_LongString</span><span class="Other">:</span>
     <span class="Identifier">s</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>               <span class="Comment">## For AMF0_String and AMF0_LongString types, holds the string value.</span>
   <span class="Keyword">of</span> <span class="Identifier">AMF0_Object</span><span class="Other">,</span> <span class="Identifier">AMF0_ECMAArray</span><span class="Other">:</span>
-    <span class="Identifier">obj</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">,</span> <a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">]</span> <span class="Comment">## For AMF0_Object and AMF0_ECMAArray types, holds a table of key-value pairs.</span>
+    <span class="Identifier">obj</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">,</span> <a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">]</span> <span class="Comment">## For AMF0_Object and AMF0_ECMAArray types, holds a table of key-value pairs.</span>
   <span class="Keyword">of</span> <span class="Identifier">AMF0_StrictArray</span><span class="Other">:</span>
-    <span class="Identifier">arr</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">]</span>     <span class="Comment">## For AMF0_StrictArray type, holds a sequence of AMF0 values.</span>
+    <span class="Identifier">arr</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">]</span>     <span class="Comment">## For AMF0_StrictArray type, holds a sequence of AMF0 values.</span>
   <span class="Keyword">of</span> <span class="Identifier">AMF0_Null</span><span class="Other">,</span> <span class="Identifier">AMF0_Undefined</span><span class="Other">:</span>
     <span class="Keyword">nil</span></pre></dt>
   <dd>
     
     Represents a value encoded in AMF0 format, used for RTMP action messages.
+    
+  </dd>
+</div>
+<div id="AMF3Type">
+  <dt><pre><a href="#AMF3Type"><span class="Identifier">AMF3Type</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
+  <span class="Identifier">AMF3_Undefined</span> <span class="Other">=</span> <span class="DecNumber">0</span><span class="Other">,</span> <span class="Identifier">AMF3_Null</span> <span class="Other">=</span> <span class="DecNumber">1</span><span class="Other">,</span> <span class="Identifier">AMF3_False</span> <span class="Other">=</span> <span class="DecNumber">2</span><span class="Other">,</span> <span class="Identifier">AMF3_True</span> <span class="Other">=</span> <span class="DecNumber">3</span><span class="Other">,</span>
+  <span class="Identifier">AMF3_Integer</span> <span class="Other">=</span> <span class="DecNumber">4</span><span class="Other">,</span> <span class="Identifier">AMF3_Double</span> <span class="Other">=</span> <span class="DecNumber">5</span><span class="Other">,</span> <span class="Identifier">AMF3_String</span> <span class="Other">=</span> <span class="DecNumber">6</span><span class="Other">,</span> <span class="Identifier">AMF3_Object</span> <span class="Other">=</span> <span class="DecNumber">8</span><span class="Other">,</span>
+  <span class="Identifier">AMF3_Array</span> <span class="Other">=</span> <span class="DecNumber">9</span><span class="Other">,</span> <span class="Identifier">AMF3_ByteArray</span> <span class="Other">=</span> <span class="DecNumber">12</span></pre></dt>
+  <dd>
+    
+    AMF3 data types (marker values 0x00-0x1F).
     
   </dd>
 </div>
@@ -202,7 +228,7 @@
   <dl class="item">
     <div id="amf0ToStr-procs-all">
   <div id="amf0ToStr,AMF0Value">
-  <dt><pre><span class="Keyword">proc</span> <a href="#amf0ToStr%2CAMF0Value"><span class="Identifier">amf0ToStr</span></a><span class="Other">(</span><span class="Identifier">v</span><span class="Other">:</span> <a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#amf0ToStr%2CAMF0Value"><span class="Identifier">amf0ToStr</span></a><span class="Other">(</span><span class="Identifier">v</span><span class="Other">:</span> <a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Converts an AMF0Value to a human-readable string for debugging purposes. Complex types are summarized as &quot;&lt;complex&gt;&quot;.
@@ -213,7 +239,7 @@
 </div>
 <div id="amfObj-procs-all">
   <div id="amfObj,openArray[]">
-  <dt><pre><span class="Keyword">proc</span> <a href="#amfObj%2CopenArray%5B%5D"><span class="Identifier">amfObj</span></a><span class="Other">(</span><span class="Identifier">pairs</span><span class="Other">:</span> <span class="Identifier">openArray</span><span class="Other">[</span><span class="Other">(</span><span class="Identifier">string</span><span class="Other">,</span> <a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">)</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#amfObj%2CopenArray%5B%5D"><span class="Identifier">amfObj</span></a><span class="Other">(</span><span class="Identifier">pairs</span><span class="Other">:</span> <span class="Identifier">openArray</span><span class="Other">[</span><span class="Other">(</span><span class="Identifier">string</span><span class="Other">,</span> <a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">)</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
@@ -225,7 +251,7 @@
 </div>
 <div id="decodeAllAMF0-procs-all">
   <div id="decodeAllAMF0,seq[byte]">
-  <dt><pre><span class="Keyword">proc</span> <a href="#decodeAllAMF0%2Cseq%5Bbyte%5D"><span class="Identifier">decodeAllAMF0</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">]</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#decodeAllAMF0%2Cseq%5Bbyte%5D"><span class="Identifier">decodeAllAMF0</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">]</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
@@ -237,7 +263,7 @@
 </div>
 <div id="decodeAllAMF0Ptr-procs-all">
   <div id="decodeAllAMF0Ptr,ptr.byte,int">
-  <dt><pre><span class="Keyword">proc</span> <a href="#decodeAllAMF0Ptr%2Cptr.byte%2Cint"><span class="Identifier">decodeAllAMF0Ptr</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">byte</span><span class="Other">;</span> <span class="Identifier">dataLen</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">]</span> {.
+  <dt><pre><span class="Keyword">proc</span> <a href="#decodeAllAMF0Ptr%2Cptr.byte%2Cint"><span class="Identifier">decodeAllAMF0Ptr</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">byte</span><span class="Other">;</span> <span class="Identifier">dataLen</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">]</span> {.
     <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
@@ -249,7 +275,7 @@
 </div>
 <div id="decodeAllAMF0Seq-procs-all">
   <div id="decodeAllAMF0Seq,seq[byte]">
-  <dt><pre><span class="Keyword">proc</span> <a href="#decodeAllAMF0Seq%2Cseq%5Bbyte%5D"><span class="Identifier">decodeAllAMF0Seq</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">]</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#decodeAllAMF0Seq%2Cseq%5Bbyte%5D"><span class="Identifier">decodeAllAMF0Seq</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">]</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
@@ -259,9 +285,21 @@
 </div>
 
 </div>
+<div id="decodeAllAMF3-procs-all">
+  <div id="decodeAllAMF3,seq[byte]">
+  <dt><pre><span class="Keyword">proc</span> <a href="#decodeAllAMF3%2Cseq%5Bbyte%5D"><span class="Identifier">decodeAllAMF3</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">]</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Decode all AMF3 values from a byte sequence.
+    
+  </dd>
+</div>
+
+</div>
 <div id="decodeOneAMF0-procs-all">
   <div id="decodeOneAMF0,seq[byte],int">
-  <dt><pre><span class="Keyword">proc</span> <a href="#decodeOneAMF0%2Cseq%5Bbyte%5D%2Cint"><span class="Identifier">decodeOneAMF0</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">idx</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">int</span><span class="Other">)</span><span class="Other">:</span> <a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#decodeOneAMF0%2Cseq%5Bbyte%5D%2Cint"><span class="Identifier">decodeOneAMF0</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">idx</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">int</span><span class="Other">)</span><span class="Other">:</span> <a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
@@ -270,7 +308,7 @@
   </dd>
 </div>
 <div id="decodeOneAMF0,ByteReader">
-  <dt><pre><span class="Keyword">proc</span> <a href="#decodeOneAMF0%2CByteReader"><span class="Identifier">decodeOneAMF0</span></a><span class="Other">(</span><span class="Identifier">r</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">ByteReader</span><span class="Other">)</span><span class="Other">:</span> <a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#decodeOneAMF0%2CByteReader"><span class="Identifier">decodeOneAMF0</span></a><span class="Other">(</span><span class="Identifier">r</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">ByteReader</span><span class="Other">)</span><span class="Other">:</span> <a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
@@ -280,9 +318,21 @@
 </div>
 
 </div>
+<div id="decodeOneAMF3-procs-all">
+  <div id="decodeOneAMF3,seq[byte],int">
+  <dt><pre><span class="Keyword">proc</span> <a href="#decodeOneAMF3%2Cseq%5Bbyte%5D%2Cint"><span class="Identifier">decodeOneAMF3</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">idx</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">int</span><span class="Other">)</span><span class="Other">:</span> <a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Decode a single AMF3 value. Returns AMF0Value for interop.
+    
+  </dd>
+</div>
+
+</div>
 <div id="encodeAMF0Values-procs-all">
   <div id="encodeAMF0Values,seq[AMF0Value]">
-  <dt><pre><span class="Keyword">proc</span> <a href="#encodeAMF0Values%2Cseq%5BAMF0Value%5D"><span class="Identifier">encodeAMF0Values</span></a><span class="Other">(</span><span class="Identifier">vals</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#encodeAMF0Values%2Cseq%5BAMF0Value%5D"><span class="Identifier">encodeAMF0Values</span></a><span class="Other">(</span><span class="Identifier">vals</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
@@ -294,7 +344,7 @@
 </div>
 <div id="encodeOneAMF0-procs-all">
   <div id="encodeOneAMF0,AMF0Value,seq[byte]">
-  <dt><pre><span class="Keyword">proc</span> <a href="#encodeOneAMF0%2CAMF0Value%2Cseq%5Bbyte%5D"><span class="Identifier">encodeOneAMF0</span></a><span class="Other">(</span><span class="Identifier">v</span><span class="Other">:</span> <a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">;</span> <span class="Identifier">outSeq</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#encodeOneAMF0%2CAMF0Value%2Cseq%5Bbyte%5D"><span class="Identifier">encodeOneAMF0</span></a><span class="Other">(</span><span class="Identifier">v</span><span class="Other">:</span> <a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">;</span> <span class="Identifier">outSeq</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
@@ -306,7 +356,7 @@
 </div>
 <div id="newBoolean-procs-all">
   <div id="newBoolean,bool">
-  <dt><pre><span class="Keyword">proc</span> <a href="#newBoolean%2Cbool"><span class="Identifier">newBoolean</span></a><span class="Other">(</span><span class="Identifier">v</span><span class="Other">:</span> <span class="Identifier">bool</span><span class="Other">)</span><span class="Other">:</span> <a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#newBoolean%2Cbool"><span class="Identifier">newBoolean</span></a><span class="Other">(</span><span class="Identifier">v</span><span class="Other">:</span> <span class="Identifier">bool</span><span class="Other">)</span><span class="Other">:</span> <a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     
@@ -317,7 +367,7 @@
 </div>
 <div id="newEcmaArray-procs-all">
   <div id="newEcmaArray">
-  <dt><pre><span class="Keyword">proc</span> <a href="#newEcmaArray"><span class="Identifier">newEcmaArray</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#newEcmaArray"><span class="Identifier">newEcmaArray</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     
@@ -328,7 +378,7 @@
 </div>
 <div id="newNull-procs-all">
   <div id="newNull">
-  <dt><pre><span class="Keyword">proc</span> <a href="#newNull"><span class="Identifier">newNull</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#newNull"><span class="Identifier">newNull</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     
@@ -339,7 +389,7 @@
 </div>
 <div id="newNumber-procs-all">
   <div id="newNumber,float64">
-  <dt><pre><span class="Keyword">proc</span> <a href="#newNumber%2Cfloat64"><span class="Identifier">newNumber</span></a><span class="Other">(</span><span class="Identifier">v</span><span class="Other">:</span> <span class="Identifier">float64</span><span class="Other">)</span><span class="Other">:</span> <a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#newNumber%2Cfloat64"><span class="Identifier">newNumber</span></a><span class="Other">(</span><span class="Identifier">v</span><span class="Other">:</span> <span class="Identifier">float64</span><span class="Other">)</span><span class="Other">:</span> <a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     
@@ -350,7 +400,7 @@
 </div>
 <div id="newObject-procs-all">
   <div id="newObject">
-  <dt><pre><span class="Keyword">proc</span> <a href="#newObject"><span class="Identifier">newObject</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#newObject"><span class="Identifier">newObject</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     
@@ -361,7 +411,7 @@
 </div>
 <div id="newStrictArray-procs-all">
   <div id="newStrictArray,seq[AMF0Value]">
-  <dt><pre><span class="Keyword">proc</span> <a href="#newStrictArray%2Cseq%5BAMF0Value%5D"><span class="Identifier">newStrictArray</span></a><span class="Other">(</span><span class="Identifier">items</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#newStrictArray%2Cseq%5BAMF0Value%5D"><span class="Identifier">newStrictArray</span></a><span class="Other">(</span><span class="Identifier">items</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
@@ -373,7 +423,7 @@
 </div>
 <div id="newString-procs-all">
   <div id="newString,string">
-  <dt><pre><span class="Keyword">proc</span> <a href="#newString%2Cstring"><span class="Identifier">newString</span></a><span class="Other">(</span><span class="Identifier">v</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#newString%2Cstring"><span class="Identifier">newString</span></a><span class="Other">(</span><span class="Identifier">v</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     
@@ -384,7 +434,7 @@
 </div>
 <div id="newUndefined-procs-all">
   <div id="newUndefined">
-  <dt><pre><span class="Keyword">proc</span> <a href="#newUndefined"><span class="Identifier">newUndefined</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="actionmessage.html#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#newUndefined"><span class="Identifier">newUndefined</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="#AMF0Value"><span class="Identifier">AMF0Value</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     
@@ -403,7 +453,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-26 12:42:05 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-08-21 14:43:00 UTC</small>
       </div>
     </div>
   </div>

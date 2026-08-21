@@ -16,13 +16,16 @@
 <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAA3XAAAN1wFCKJt4AAAAB3RJTUUH4QQQEwksSS9ZWwAAAk1JREFUWMPtll2ITVEUx39nn/O7Y5qR8f05wtCUUr6ZIS++8pEnkZInPImneaCQ5METNdOkeFBKUhMPRIkHKfEuUZSUlGlKPN2TrgfncpvmnntnmlEyq1Z7t89/rf9a6+y99oZxGZf/XeIq61EdtgKXgdXA0xrYAvBjOIF1AI9zvjcC74BSpndrJPkBWDScTF8Aa4E3wDlgHbASaANmVqlcCnwHvgDvgVfAJ+AikAAvgfVZwLnSVZHZaOuKoQi3ZOMi4NkYkpe1p4J7A8BpYAD49hfIy/oqG0+hLomiKP2L5L+1ubn5115S+3OAn4EnwBlgMzCjyt6ZAnQCJ4A7wOs88iRJHvw50HoujuPBoCKwHWiosy8MdfZnAdcHk8dxXFJ3VQbQlCTJvRBCGdRbD4M6uc5glpY3eAihpN5S5w12diSEcCCEcKUO4ljdr15T76ur1FDDLIQQ3qv71EdDOe3Kxj3leRXyk+pxdWnFWod6Wt2bY3de3aSuUHcPBVimHs7mK9WrmeOF6lR1o9qnzskh2ar2qm1qizpfXaPeVGdlmGN5pb09qMxz1Xb1kLqgzn1RyH7JUXW52lr5e/Kqi9qpto7V1atuUzfnARrV7jEib1T76gG2qxdGmXyiekkt1GswPTtek0aBfJp6YySGBfWg2tPQ0FAYgf1stUfdmdcjarbYJEniKIq6gY/Aw+zWHAC+p2labGpqiorFYgGYCEzN7oQdQClN07O1/EfDyGgC0ALMBdYAi4FyK+4H3gLPsxfR1zRNi+NP7nH5J+QntnXe5B5mpfQAAAAASUVORK5CYII=">
 
 <!-- CSS -->
-<link rel="stylesheet" type="text/css" href="../nimdoc.out.css?v=2.2.8">
+<link rel="stylesheet" type="text/css" href="../nimdoc.out.css?v=2.2.10">
 
 <!-- JS -->
-<script type="text/javascript" src="../dochack.js?v=2.2.8"></script>
+<script type="text/javascript" src="../dochack.js?v=2.2.10"></script>
 </head>
 <body>
   <div class="document" id="documentId">
+    <input type="checkbox" id="nav-toggle" hidden>
+    <label for="nav-toggle" id="nav-burger">&#9776;</label>
+    <label for="nav-toggle" id="nav-overlay"></label>
     <div class="container">
       <h1 class="title">rtmp/rtmpclient</h1>
       <div class="row">
@@ -59,63 +62,64 @@
     <summary><a class="reference reference-toplevel" href="#7" id="57">Types</a></summary>
     <ul class="simple simple-toc-section">
       <li><a class="reference" href="#AacStreamState" title="AacStreamState = ref object
-  fd*: cint                  ## File descriptor
-  pos*: int64                ## Current position in the file
-  sampleRate*: int           ## Sampling rate
-  channels*: int             ## Number of channels
-  ts*: uint32                ## Timestamp
-  seqHeaderSent*: bool       ## Whether AAC sequence header has been sent
-  msgStreamId*: uint32       ## Message Stream ID
-  csid*: uint8               ## Chunk Stream ID
-  lowWater*: int             ## Low water mark for backpressure
-  done*: bool                ## Whether streaming is done
-  tsRem*: int                ## Remaining timestamp for pacing
-  preRollFrames*: int        ## Pre-roll frames for AAC">AacStreamState</a></li>
+  fd*: cint
+  pos*: int64
+  sampleRate*: int
+  channels*: int
+  ts*: uint32
+  seqHeaderSent*: bool
+  msgStreamId*: uint32
+  csid*: uint8
+  lowWater*: int
+  done*: bool
+  tsRem*: int
+  preRollFrames*: int">AacStreamState</a></li>
 <li><a class="reference" href="#ChunkStreamState" title="ChunkStreamState = object">ChunkStreamState</a></li>
 <li><a class="reference" href="#ConnStage" title="ConnStage = enum
   stInit, stHandshakeDone, stConnectSent, stConnectOk, stCreateStreamSent,
   stStreamIdOk, stPublishSent, stPublishing">ConnStage</a></li>
 <li><a class="reference" href="#RtmpClient" title="RtmpClient = ref object
-  base*: ptr event_base
-  bev*: ptr bufferevent
+  loop*: Loop
+  conn*: Connection
   msgStreamId*: uint32
-  onStreamStart*: StreamFileCallback ## Callbacks for streaming events
-  onStreamProgress*: StreamFileCallback ## Callbacks for streaming events
-  onStreamEnd*: StreamFileCallback ## Callbacks for streaming events
-  onStreamError*: StreamErrorCallback ## Callbacks for streaming events
-  onPublishOk*: proc (c: RtmpClient) ## Callback when publish is successful
-  aac*: AacStreamState       ## AAC state for audio streaming (if needed)
-  ps*: PlaylistState         ## Playlist state for synchronized streaming
-  sendTimer*: ptr event      ## libevent timer for pacing
-  sendLeadMs*: int = 1200    ## milliseconds of lead to keep ahead of real-time
-  wallOriginMs*: int64       ## wall-clock ms corresponding to globalTs==0
-  lastSendMs*: int64         ## last time we actually scheduled/sent
-  inChunks*: Table[uint32, ChunkStreamState] ## Incoming chunk streams by chunk stream ID
-  ackWindow*: uint32         ## Acknowledgement window size
-  inBytes*: uint64           ## Total bytes received
-  lastAcked*: uint64         ## Last acknowledged byte count
-  outChunkSize*: int = 2048  ## Outbound chunk size">RtmpClient</a></li>
+  onStreamStart*: StreamFileCallback
+  onStreamProgress*: StreamFileCallback
+  onStreamEnd*: StreamFileCallback
+  onStreamError*: StreamErrorCallback
+  onError*: proc (c: RtmpClient; msg: string) ## Callback when server returns _error (connect failure, etc.)
+  onPublishOk*: proc (c: RtmpClient)
+  aac*: AacStreamState
+  ps*: PlaylistState
+  sendTimerId*: TimerId
+  sendLeadMs*: int = 1200
+  wallOriginMs*: int64
+  lastSendMs*: int64
+  inChunks*: Table[uint32, ChunkStreamState]
+  ackWindow*: uint32
+  inBytes*: uint64
+  lastAcked*: uint64
+  outChunkSize*: int = 2048">RtmpClient</a></li>
 <li><a class="reference" href="#RtmpHandshakeState" title="RtmpHandshakeState = enum
   hsSendC0C1, hsRecvS0S1S2, hsSendC2, hsDone">RtmpHandshakeState</a></li>
 <li><a class="reference" href="#StreamAudioCallback" title="StreamAudioCallback = proc (client: RtmpClient; aac: AacStreamState)">StreamAudioCallback</a></li>
 <li><a class="reference" href="#StreamErrorCallback" title="StreamErrorCallback = proc (client: RtmpClient; st: StreamState; errMsg: cstring)">StreamErrorCallback</a></li>
 <li><a class="reference" href="#StreamFileCallback" title="StreamFileCallback = proc (client: RtmpClient; st: StreamState; bytesSent: int)">StreamFileCallback</a></li>
 <li><a class="reference" href="#StreamState" title="StreamState = ref object
-  fd*: cint                  ## File descriptor
-  totalSize*: int64          ## Total size of the file
-  offset*: int64             ## Current offset in the file
-  msgType*: uint8            ## RTMP message type (e.g., 0x09 for video, 0x08 for audio)
-  csid*: uint8               ## Chunk Stream ID
-  msgStreamId*: uint32       ## Message Stream ID
-  ts*: uint32                ## Timestamp
-  lowWater*: int             ## Low water mark for backpressure
-  done*: bool                ## Whether streaming is done
-  tsOffset*: uint32          ## Timestamp offset for synchronization
-  tagInProgress*: bool       ## Whether we're in the middle of sending a tag (for pacing)
-  tagRemaining*: int         ## Remaining bytes in the current tag being sent
-  tagPayloadPos*: int64      ## File position of the current tag payload being sent
-  tagTsAbs*: uint32          ## Absolute timestamp of the current tag being sent (ts + tsOffset)
-  tagSentAny*: bool          ## Whether we've sent any bytes of the current tag (for pacing)">StreamState</a></li>
+  fd*: cint
+  totalSize*: int64
+  offset*: int64
+  msgType*: uint8
+  csid*: uint8
+  msgStreamId*: uint32
+  ts*: uint32
+  lowWater*: int
+  done*: bool
+  tsOffset*: uint32
+  tagInProgress*: bool
+  tagRemaining*: int
+  tagPayloadPos*: int64
+  tagTsAbs*: uint32
+  tagSentAny*: bool">StreamState</a></li>
 
     </ul>
   </details>
@@ -126,10 +130,6 @@
     <ul class="simple simple-toc-section">
       <ul class="simple nested-toc-section">newRtmpClient
   <li><a class="reference" href="#newRtmpClient%2Cstring" title="newRtmpClient(address: string): RtmpClient">newRtmpClient(address: string): RtmpClient</a></li>
-
-</ul>
-<ul class="simple nested-toc-section">onEvent
-  <li><a class="reference" href="#onEvent%2Cptr.bufferevent%2Ccshort%2Cpointer" title="onEvent(bev: ptr bufferevent; what: cshort; ctx: pointer)">onEvent(bev: ptr bufferevent; what: cshort; ctx: pointer)</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">startPacer
@@ -168,39 +168,39 @@
     <div id="tocRoot"></div>
     
     <p class="module-desc"><p>This module implements a RTMP client for publishing live streams to an RTMP server, and a RTMP server for receiving and processing incoming RTMP connections.</p>
-<p>It uses libevent for asynchronous network I/O and supports basic RTMP commands, control messages, and zero-copy file streaming. The client can be used to publish live video/audio streams from FLV files, while the server can be extended to handle incoming streams as needed.</p>
+<p>It uses powpow for asynchronous network I/O and supports basic RTMP commands, control messages, and zero-copy file streaming. The client can be used to publish live video/audio streams from FLV files, while the server can be extended to handle incoming streams as needed.</p>
 </p>
     <div class="section" id="6">
   <h1><a class="toc-backref" href="#6">Imports</a></h1>
   <dl class="item">
-    <a class="reference external" href="rtmpplaylist.html">rtmpplaylist</a>
+    <a class="reference external" href="rtmpplaylist.html">rtmpplaylist</a>, <a class="reference external" href="server/handshake.html">server/handshake</a>
   </dl>
 </div>
 <div class="section" id="7">
   <h1><a class="toc-backref" href="#7">Types</a></h1>
   <dl class="item">
     <div id="AacStreamState">
-  <dt><pre><a href="rtmpclient.html#AacStreamState"><span class="Identifier">AacStreamState</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
-  <span class="Identifier">fd</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">cint</span>                  <span class="Comment">## File descriptor</span>
-  <span class="Identifier">pos</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>                <span class="Comment">## Current position in the file</span>
-  <span class="Identifier">sampleRate</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>           <span class="Comment">## Sampling rate</span>
-  <span class="Identifier">channels</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>             <span class="Comment">## Number of channels</span>
-  <span class="Identifier">ts</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>                <span class="Comment">## Timestamp</span>
-  <span class="Identifier">seqHeaderSent</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>       <span class="Comment">## Whether AAC sequence header has been sent</span>
-  <span class="Identifier">msgStreamId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>       <span class="Comment">## Message Stream ID</span>
-  <span class="Identifier">csid</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint8</span>               <span class="Comment">## Chunk Stream ID</span>
-  <span class="Identifier">lowWater</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>             <span class="Comment">## Low water mark for backpressure</span>
-  <span class="Identifier">done</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>                <span class="Comment">## Whether streaming is done</span>
-  <span class="Identifier">tsRem</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>                <span class="Comment">## Remaining timestamp for pacing</span>
-  <span class="Identifier">preRollFrames</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>        <span class="Comment">## Pre-roll frames for AAC</span></pre></dt>
+  <dt><pre><a href="#AacStreamState"><span class="Identifier">AacStreamState</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <span class="Identifier">fd</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">cint</span>
+  <span class="Identifier">pos</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>
+  <span class="Identifier">sampleRate</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">channels</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">ts</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>
+  <span class="Identifier">seqHeaderSent</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">msgStreamId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>
+  <span class="Identifier">csid</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint8</span>
+  <span class="Identifier">lowWater</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">done</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">tsRem</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">preRollFrames</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span></pre></dt>
   <dd>
     
-    AAC streaming state for audio streaming
+    
     
   </dd>
 </div>
 <div id="ChunkStreamState">
-  <dt><pre><a href="rtmpclient.html#ChunkStreamState"><span class="Identifier">ChunkStreamState</span></a> <span class="Other">=</span> <span class="Keyword">object</span></pre></dt>
+  <dt><pre><a href="#ChunkStreamState"><span class="Identifier">ChunkStreamState</span></a> <span class="Other">=</span> <span class="Keyword">object</span></pre></dt>
   <dd>
     
     
@@ -208,7 +208,7 @@
   </dd>
 </div>
 <div id="ConnStage">
-  <dt><pre><a href="rtmpclient.html#ConnStage"><span class="Identifier">ConnStage</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
+  <dt><pre><a href="#ConnStage"><span class="Identifier">ConnStage</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
   <span class="Identifier">stInit</span><span class="Other">,</span> <span class="Identifier">stHandshakeDone</span><span class="Other">,</span> <span class="Identifier">stConnectSent</span><span class="Other">,</span> <span class="Identifier">stConnectOk</span><span class="Other">,</span> <span class="Identifier">stCreateStreamSent</span><span class="Other">,</span>
   <span class="Identifier">stStreamIdOk</span><span class="Other">,</span> <span class="Identifier">stPublishSent</span><span class="Other">,</span> <span class="Identifier">stPublishing</span></pre></dt>
   <dd>
@@ -218,26 +218,27 @@
   </dd>
 </div>
 <div id="RtmpClient">
-  <dt><pre><a href="rtmpclient.html#RtmpClient"><span class="Identifier">RtmpClient</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
-  <span class="Identifier">base</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">event_base</span>
-  <span class="Identifier">bev</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">bufferevent</span>
+  <dt><pre><a href="#RtmpClient"><span class="Identifier">RtmpClient</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <span class="Identifier">loop</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Loop</span>
+  <span class="Identifier">conn</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Connection</span>
   <span class="Identifier">msgStreamId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>
-  <span class="Identifier">onStreamStart</span><span class="Operator">*</span><span class="Other">:</span> <a href="rtmpclient.html#StreamFileCallback"><span class="Identifier">StreamFileCallback</span></a> <span class="Comment">## Callbacks for streaming events</span>
-  <span class="Identifier">onStreamProgress</span><span class="Operator">*</span><span class="Other">:</span> <a href="rtmpclient.html#StreamFileCallback"><span class="Identifier">StreamFileCallback</span></a> <span class="Comment">## Callbacks for streaming events</span>
-  <span class="Identifier">onStreamEnd</span><span class="Operator">*</span><span class="Other">:</span> <a href="rtmpclient.html#StreamFileCallback"><span class="Identifier">StreamFileCallback</span></a> <span class="Comment">## Callbacks for streaming events</span>
-  <span class="Identifier">onStreamError</span><span class="Operator">*</span><span class="Other">:</span> <a href="rtmpclient.html#StreamErrorCallback"><span class="Identifier">StreamErrorCallback</span></a> <span class="Comment">## Callbacks for streaming events</span>
-  <span class="Identifier">onPublishOk</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">proc</span> <span class="Other">(</span><span class="Identifier">c</span><span class="Other">:</span> <a href="rtmpclient.html#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">)</span> <span class="Comment">## Callback when publish is successful</span>
-  <span class="Identifier">aac</span><span class="Operator">*</span><span class="Other">:</span> <a href="rtmpclient.html#AacStreamState"><span class="Identifier">AacStreamState</span></a>       <span class="Comment">## AAC state for audio streaming (if needed)</span>
-  <span class="Identifier">ps</span><span class="Operator">*</span><span class="Other">:</span> <a href="rtmpplaylist.html#PlaylistState"><span class="Identifier">PlaylistState</span></a>         <span class="Comment">## Playlist state for synchronized streaming</span>
-  <span class="Identifier">sendTimer</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">event</span>      <span class="Comment">## libevent timer for pacing</span>
-  <span class="Identifier">sendLeadMs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span> <span class="Other">=</span> <span class="DecNumber">1200</span>    <span class="Comment">## milliseconds of lead to keep ahead of real-time</span>
-  <span class="Identifier">wallOriginMs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>       <span class="Comment">## wall-clock ms corresponding to globalTs==0</span>
-  <span class="Identifier">lastSendMs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>         <span class="Comment">## last time we actually scheduled/sent</span>
-  <span class="Identifier">inChunks</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">uint32</span><span class="Other">,</span> <a href="rtmpclient.html#ChunkStreamState"><span class="Identifier">ChunkStreamState</span></a><span class="Other">]</span> <span class="Comment">## Incoming chunk streams by chunk stream ID</span>
-  <span class="Identifier">ackWindow</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>         <span class="Comment">## Acknowledgement window size</span>
-  <span class="Identifier">inBytes</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint64</span>           <span class="Comment">## Total bytes received</span>
-  <span class="Identifier">lastAcked</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint64</span>         <span class="Comment">## Last acknowledged byte count</span>
-  <span class="Identifier">outChunkSize</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span> <span class="Other">=</span> <span class="DecNumber">2048</span>  <span class="Comment">## Outbound chunk size</span></pre></dt>
+  <span class="Identifier">onStreamStart</span><span class="Operator">*</span><span class="Other">:</span> <a href="#StreamFileCallback"><span class="Identifier">StreamFileCallback</span></a>
+  <span class="Identifier">onStreamProgress</span><span class="Operator">*</span><span class="Other">:</span> <a href="#StreamFileCallback"><span class="Identifier">StreamFileCallback</span></a>
+  <span class="Identifier">onStreamEnd</span><span class="Operator">*</span><span class="Other">:</span> <a href="#StreamFileCallback"><span class="Identifier">StreamFileCallback</span></a>
+  <span class="Identifier">onStreamError</span><span class="Operator">*</span><span class="Other">:</span> <a href="#StreamErrorCallback"><span class="Identifier">StreamErrorCallback</span></a>
+  <span class="Identifier">onError</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">proc</span> <span class="Other">(</span><span class="Identifier">c</span><span class="Other">:</span> <a href="#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">;</span> <span class="Identifier">msg</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span> <span class="Comment">## Callback when server returns _error (connect failure, etc.)</span>
+  <span class="Identifier">onPublishOk</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">proc</span> <span class="Other">(</span><span class="Identifier">c</span><span class="Other">:</span> <a href="#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">)</span>
+  <span class="Identifier">aac</span><span class="Operator">*</span><span class="Other">:</span> <a href="#AacStreamState"><span class="Identifier">AacStreamState</span></a>
+  <span class="Identifier">ps</span><span class="Operator">*</span><span class="Other">:</span> <a href="rtmpplaylist.html#PlaylistState"><span class="Identifier">PlaylistState</span></a>
+  <span class="Identifier">sendTimerId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">TimerId</span>
+  <span class="Identifier">sendLeadMs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span> <span class="Other">=</span> <span class="DecNumber">1200</span>
+  <span class="Identifier">wallOriginMs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>
+  <span class="Identifier">lastSendMs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>
+  <span class="Identifier">inChunks</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">uint32</span><span class="Other">,</span> <a href="#ChunkStreamState"><span class="Identifier">ChunkStreamState</span></a><span class="Other">]</span>
+  <span class="Identifier">ackWindow</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>
+  <span class="Identifier">inBytes</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint64</span>
+  <span class="Identifier">lastAcked</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint64</span>
+  <span class="Identifier">outChunkSize</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span> <span class="Other">=</span> <span class="DecNumber">2048</span></pre></dt>
   <dd>
     
     
@@ -245,7 +246,7 @@
   </dd>
 </div>
 <div id="RtmpHandshakeState">
-  <dt><pre><a href="rtmpclient.html#RtmpHandshakeState"><span class="Identifier">RtmpHandshakeState</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
+  <dt><pre><a href="#RtmpHandshakeState"><span class="Identifier">RtmpHandshakeState</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
   <span class="Identifier">hsSendC0C1</span><span class="Other">,</span> <span class="Identifier">hsRecvS0S1S2</span><span class="Other">,</span> <span class="Identifier">hsSendC2</span><span class="Other">,</span> <span class="Identifier">hsDone</span></pre></dt>
   <dd>
     
@@ -254,49 +255,49 @@
   </dd>
 </div>
 <div id="StreamAudioCallback">
-  <dt><pre><a href="rtmpclient.html#StreamAudioCallback"><span class="Identifier">StreamAudioCallback</span></a> <span class="Other">=</span> <span class="Keyword">proc</span> <span class="Other">(</span><span class="Identifier">client</span><span class="Other">:</span> <a href="rtmpclient.html#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">;</span> <span class="Identifier">aac</span><span class="Other">:</span> <a href="rtmpclient.html#AacStreamState"><span class="Identifier">AacStreamState</span></a><span class="Other">)</span></pre></dt>
+  <dt><pre><a href="#StreamAudioCallback"><span class="Identifier">StreamAudioCallback</span></a> <span class="Other">=</span> <span class="Keyword">proc</span> <span class="Other">(</span><span class="Identifier">client</span><span class="Other">:</span> <a href="#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">;</span> <span class="Identifier">aac</span><span class="Other">:</span> <a href="#AacStreamState"><span class="Identifier">AacStreamState</span></a><span class="Other">)</span></pre></dt>
   <dd>
     
-    Callback for AAC streaming events, called with current AAC stream state (for pacing)
+    
     
   </dd>
 </div>
 <div id="StreamErrorCallback">
-  <dt><pre><a href="rtmpclient.html#StreamErrorCallback"><span class="Identifier">StreamErrorCallback</span></a> <span class="Other">=</span> <span class="Keyword">proc</span> <span class="Other">(</span><span class="Identifier">client</span><span class="Other">:</span> <a href="rtmpclient.html#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">;</span> <span class="Identifier">st</span><span class="Other">:</span> <a href="rtmpclient.html#StreamState"><span class="Identifier">StreamState</span></a><span class="Other">;</span> <span class="Identifier">errMsg</span><span class="Other">:</span> <span class="Identifier">cstring</span><span class="Other">)</span></pre></dt>
+  <dt><pre><a href="#StreamErrorCallback"><span class="Identifier">StreamErrorCallback</span></a> <span class="Other">=</span> <span class="Keyword">proc</span> <span class="Other">(</span><span class="Identifier">client</span><span class="Other">:</span> <a href="#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">;</span> <span class="Identifier">st</span><span class="Other">:</span> <a href="#StreamState"><span class="Identifier">StreamState</span></a><span class="Other">;</span> <span class="Identifier">errMsg</span><span class="Other">:</span> <span class="Identifier">cstring</span><span class="Other">)</span></pre></dt>
   <dd>
     
-    Callback for streaming errors, called with current stream state and error message
+    
     
   </dd>
 </div>
 <div id="StreamFileCallback">
-  <dt><pre><a href="rtmpclient.html#StreamFileCallback"><span class="Identifier">StreamFileCallback</span></a> <span class="Other">=</span> <span class="Keyword">proc</span> <span class="Other">(</span><span class="Identifier">client</span><span class="Other">:</span> <a href="rtmpclient.html#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">;</span> <span class="Identifier">st</span><span class="Other">:</span> <a href="rtmpclient.html#StreamState"><span class="Identifier">StreamState</span></a><span class="Other">;</span> <span class="Identifier">bytesSent</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span></pre></dt>
+  <dt><pre><a href="#StreamFileCallback"><span class="Identifier">StreamFileCallback</span></a> <span class="Other">=</span> <span class="Keyword">proc</span> <span class="Other">(</span><span class="Identifier">client</span><span class="Other">:</span> <a href="#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">;</span> <span class="Identifier">st</span><span class="Other">:</span> <a href="#StreamState"><span class="Identifier">StreamState</span></a><span class="Other">;</span> <span class="Identifier">bytesSent</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span></pre></dt>
   <dd>
     
-    Callback for streaming events, called with current stream state and bytes sent in this callback (for pacing)
+    
     
   </dd>
 </div>
 <div id="StreamState">
-  <dt><pre><a href="rtmpclient.html#StreamState"><span class="Identifier">StreamState</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
-  <span class="Identifier">fd</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">cint</span>                  <span class="Comment">## File descriptor</span>
-  <span class="Identifier">totalSize</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>          <span class="Comment">## Total size of the file</span>
-  <span class="Identifier">offset</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>             <span class="Comment">## Current offset in the file</span>
-  <span class="Identifier">msgType</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint8</span>            <span class="Comment">## RTMP message type (e.g., 0x09 for video, 0x08 for audio)</span>
-  <span class="Identifier">csid</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint8</span>               <span class="Comment">## Chunk Stream ID</span>
-  <span class="Identifier">msgStreamId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>       <span class="Comment">## Message Stream ID</span>
-  <span class="Identifier">ts</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>                <span class="Comment">## Timestamp</span>
-  <span class="Identifier">lowWater</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>             <span class="Comment">## Low water mark for backpressure</span>
-  <span class="Identifier">done</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>                <span class="Comment">## Whether streaming is done</span>
-  <span class="Identifier">tsOffset</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>          <span class="Comment">## Timestamp offset for synchronization</span>
-  <span class="Identifier">tagInProgress</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>       <span class="Comment">## Whether we're in the middle of sending a tag (for pacing)</span>
-  <span class="Identifier">tagRemaining</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>         <span class="Comment">## Remaining bytes in the current tag being sent</span>
-  <span class="Identifier">tagPayloadPos</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>      <span class="Comment">## File position of the current tag payload being sent</span>
-  <span class="Identifier">tagTsAbs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>          <span class="Comment">## Absolute timestamp of the current tag being sent (ts + tsOffset)</span>
-  <span class="Identifier">tagSentAny</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>          <span class="Comment">## Whether we've sent any bytes of the current tag (for pacing)</span></pre></dt>
+  <dt><pre><a href="#StreamState"><span class="Identifier">StreamState</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <span class="Identifier">fd</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">cint</span>
+  <span class="Identifier">totalSize</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>
+  <span class="Identifier">offset</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>
+  <span class="Identifier">msgType</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint8</span>
+  <span class="Identifier">csid</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint8</span>
+  <span class="Identifier">msgStreamId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>
+  <span class="Identifier">ts</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>
+  <span class="Identifier">lowWater</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">done</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">tsOffset</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>
+  <span class="Identifier">tagInProgress</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">tagRemaining</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">tagPayloadPos</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int64</span>
+  <span class="Identifier">tagTsAbs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>
+  <span class="Identifier">tagSentAny</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span></pre></dt>
   <dd>
     
-    Streaming state for zero-copy file streaming
+    
     
   </dd>
 </div>
@@ -308,25 +309,12 @@
   <dl class="item">
     <div id="newRtmpClient-procs-all">
   <div id="newRtmpClient,string">
-  <dt><pre><span class="Keyword">proc</span> <a href="#newRtmpClient%2Cstring"><span class="Identifier">newRtmpClient</span></a><span class="Other">(</span><span class="Identifier">address</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="rtmpclient.html#RtmpClient"><span class="Identifier">RtmpClient</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#newRtmpClient%2Cstring"><span class="Identifier">newRtmpClient</span></a><span class="Other">(</span><span class="Identifier">address</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="#RtmpClient"><span class="Identifier">RtmpClient</span></a> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">NetError</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">TimeEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">ReadDirEffect</span><span class="Other">,</span> <span class="Identifier">ReadIOEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    <p>Create new RTMP client and initiate connection to address. Address should be in form &quot;rtmp://host<a class="reference internal" href="#:port">:port</a>/app/streamKey&quot;.</p>
-<p>Port is optional (default 1935 for rtmp, 443 for rtmps).</p>
-
-    
-  </dd>
-</div>
-
-</div>
-<div id="onEvent-procs-all">
-  <div id="onEvent,ptr.bufferevent,cshort,pointer">
-  <dt><pre><span class="Keyword">proc</span> <a href="#onEvent%2Cptr.bufferevent%2Ccshort%2Cpointer"><span class="Identifier">onEvent</span></a><span class="Other">(</span><span class="Identifier">bev</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">bufferevent</span><span class="Other">;</span> <span class="Identifier">what</span><span class="Other">:</span> <span class="Identifier">cshort</span><span class="Other">;</span> <span class="Identifier">ctx</span><span class="Other">:</span> <span class="Identifier">pointer</span><span class="Other">)</span> {.<span class="Identifier">cdecl</span><span class="Other">,</span>
-    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">TimeEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    Libevent event callback for connection events
+    Create new RTMP client and initiate connection to address. Address should be in form &quot;rtmp://host<a class="reference internal" href="#:port">:port</a>/app/streamKey&quot;.
     
   </dd>
 </div>
@@ -334,11 +322,11 @@
 </div>
 <div id="startPacer-procs-all">
   <div id="startPacer,RtmpClient,proc(RtmpClient)">
-  <dt><pre><span class="Keyword">proc</span> <a href="#startPacer%2CRtmpClient%2Cproc%28RtmpClient%29"><span class="Identifier">startPacer</span></a><span class="Other">(</span><span class="Identifier">client</span><span class="Other">:</span> <a href="rtmpclient.html#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">;</span> <span class="Identifier">initCb</span><span class="Other">:</span> <span class="Keyword">proc</span> <span class="Other">(</span><span class="Identifier">c</span><span class="Other">:</span> <a href="rtmpclient.html#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">)</span> <span class="Other">=</span> <span class="Keyword">nil</span><span class="Other">)</span> {.
-    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#startPacer%2CRtmpClient%2Cproc%28RtmpClient%29"><span class="Identifier">startPacer</span></a><span class="Other">(</span><span class="Identifier">client</span><span class="Other">:</span> <a href="#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">;</span> <span class="Identifier">initCb</span><span class="Other">:</span> <span class="Keyword">proc</span> <span class="Other">(</span><span class="Identifier">c</span><span class="Other">:</span> <a href="#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">)</span> <span class="Other">=</span> <span class="Keyword">nil</span><span class="Other">)</span> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">TimeEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    Start pacing loop if not already active, and call initCb for any one-time initialization (e.g. start first stream).
+    Start pacing loop if not already active, and call initCb for any one-time initialization.
     
   </dd>
 </div>
@@ -346,14 +334,14 @@
 </div>
 <div id="startStreamAacAdtsZeroCopy-procs-all">
   <div id="startStreamAacAdtsZeroCopy,RtmpClient,string,uint32,uint8,int,uint32">
-  <dt><pre><span class="Keyword">proc</span> <a href="#startStreamAacAdtsZeroCopy%2CRtmpClient%2Cstring%2Cuint32%2Cuint8%2Cint%2Cuint32"><span class="Identifier">startStreamAacAdtsZeroCopy</span></a><span class="Other">(</span><span class="Identifier">client</span><span class="Other">:</span> <a href="rtmpclient.html#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">;</span> <span class="Identifier">filePath</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#startStreamAacAdtsZeroCopy%2CRtmpClient%2Cstring%2Cuint32%2Cuint8%2Cint%2Cuint32"><span class="Identifier">startStreamAacAdtsZeroCopy</span></a><span class="Other">(</span><span class="Identifier">client</span><span class="Other">:</span> <a href="#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">;</span> <span class="Identifier">filePath</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span>
                                 <span class="Identifier">msgStreamId</span><span class="Other">:</span> <span class="Identifier">uint32</span><span class="Other">;</span> <span class="Identifier">csid</span><span class="Other">:</span> <span class="Identifier">uint8</span> <span class="Other">=</span> <span class="DecNumber">4'u8</span><span class="Other">;</span>
                                 <span class="Identifier">lowWater</span><span class="Other">:</span> <span class="Identifier">int</span> <span class="Other">=</span> <span class="DecNumber">256</span> <span class="Operator">*</span> <span class="DecNumber">1024</span><span class="Other">;</span>
-                                <span class="Identifier">startTs</span><span class="Other">:</span> <span class="Identifier">uint32</span> <span class="Other">=</span> <span class="DecNumber">0'u32</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+                                <span class="Identifier">startTs</span><span class="Other">:</span> <span class="Identifier">uint32</span> <span class="Other">=</span> <span class="DecNumber">0'u32</span><span class="Other">)</span> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    Start streaming an ADTS AAC file with zero-copy file segments. The file is expected to contain raw ADTS frames (no container).
+    Start streaming an ADTS AAC file with zero-copy file segments.
     
   </dd>
 </div>
@@ -361,13 +349,14 @@
 </div>
 <div id="startStreamFlvZeroCopy-procs-all">
   <div id="startStreamFlvZeroCopy,RtmpClient,string,uint32,int,uint32">
-  <dt><pre><span class="Keyword">proc</span> <a href="#startStreamFlvZeroCopy%2CRtmpClient%2Cstring%2Cuint32%2Cint%2Cuint32"><span class="Identifier">startStreamFlvZeroCopy</span></a><span class="Other">(</span><span class="Identifier">client</span><span class="Other">:</span> <a href="rtmpclient.html#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">;</span> <span class="Identifier">filePath</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#startStreamFlvZeroCopy%2CRtmpClient%2Cstring%2Cuint32%2Cint%2Cuint32"><span class="Identifier">startStreamFlvZeroCopy</span></a><span class="Other">(</span><span class="Identifier">client</span><span class="Other">:</span> <a href="#RtmpClient"><span class="Identifier">RtmpClient</span></a><span class="Other">;</span> <span class="Identifier">filePath</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span>
                             <span class="Identifier">msgStreamId</span><span class="Other">:</span> <span class="Identifier">uint32</span><span class="Other">;</span> <span class="Identifier">lowWater</span><span class="Other">:</span> <span class="Identifier">int</span> <span class="Other">=</span> <span class="DecNumber">256</span> <span class="Operator">*</span> <span class="DecNumber">1024</span><span class="Other">;</span>
                             <span class="Identifier">startTs</span><span class="Other">:</span> <span class="Identifier">uint32</span> <span class="Other">=</span> <span class="DecNumber">0'u32</span><span class="Other">)</span> {.
-    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    Start streaming an FLV file with zero-copy file segments. This is suitable for streaming pre-recorded FLV files
+    Start streaming an FLV file with zero-copy file segments.
     
   </dd>
 </div>
@@ -389,7 +378,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-26 12:42:05 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-08-21 14:43:00 UTC</small>
       </div>
     </div>
   </div>

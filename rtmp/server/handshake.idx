@@ -1,0 +1,14 @@
+nimTitle	handshake	rtmp/server/handshake.html	module rtmp/server/handshake		0
+nim	RTMP_HANDSHAKE_SIZE	rtmp/server/handshake.html#RTMP_HANDSHAKE_SIZE	const RTMP_HANDSHAKE_SIZE		12
+nim	GenuineFMSKey	rtmp/server/handshake.html#GenuineFMSKey	const GenuineFMSKey		15
+nim	GenuineFPKey	rtmp/server/handshake.html#GenuineFPKey	const GenuineFPKey		31
+nim	createC1Enhanced	rtmp/server/handshake.html#createC1Enhanced,ptr.UncheckedArray[byte]	proc createC1Enhanced(c1: ptr UncheckedArray[byte])		94
+nim	validateC1Digest	rtmp/server/handshake.html#validateC1Digest,ptr.UncheckedArray[byte]	proc validateC1Digest(c1: ptr UncheckedArray[byte]): bool		143
+nim	createS1Enhanced	rtmp/server/handshake.html#createS1Enhanced,ptr.UncheckedArray[byte]	proc createS1Enhanced(s1: ptr UncheckedArray[byte])		153
+nim	validateS1Digest	rtmp/server/handshake.html#validateS1Digest,ptr.UncheckedArray[byte]	proc validateS1Digest(s1: ptr UncheckedArray[byte]): bool		186
+nim	signC2	rtmp/server/handshake.html#signC2,ptr.UncheckedArray[byte],ptr.UncheckedArray[byte]	proc signC2(c2: ptr UncheckedArray[byte]; s1: ptr UncheckedArray[byte])		195
+nim	signS2	rtmp/server/handshake.html#signS2,ptr.UncheckedArray[byte],ptr.UncheckedArray[byte]	proc signS2(s2: ptr UncheckedArray[byte]; c1: ptr UncheckedArray[byte])		207
+nim	validateS2	rtmp/server/handshake.html#validateS2,ptr.UncheckedArray[byte],ptr.UncheckedArray[byte]	proc validateS2(s2: ptr UncheckedArray[byte]; c1: ptr UncheckedArray[byte]): bool		216
+nim	validateC2	rtmp/server/handshake.html#validateC2,ptr.UncheckedArray[byte],ptr.UncheckedArray[byte]	proc validateC2(c2: ptr UncheckedArray[byte]; s1: ptr UncheckedArray[byte]): bool		225
+nim	isEnhancedC1	rtmp/server/handshake.html#isEnhancedC1,ptr.UncheckedArray[byte]	proc isEnhancedC1(c1: ptr UncheckedArray[byte]): bool		234
+nim	isEnhancedS1	rtmp/server/handshake.html#isEnhancedS1,ptr.UncheckedArray[byte]	proc isEnhancedS1(s1: ptr UncheckedArray[byte]): bool		240
