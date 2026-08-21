@@ -9,5 +9,5 @@ srcDir        = "src"
 
 # Dependencies
 
-requires "nim >= 2.0.0"
-requires "libevent#head"
+requires "nim >= 2.2.0"
+requires "powpow"

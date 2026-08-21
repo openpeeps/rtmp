@@ -6,163 +6,35 @@
 
 ## This module implements RTMP server functionality, including connection handling,
 ## RTMP message parsing, and a simple pub/sub mechanism for streams.
-## 
-## It uses libevent for asynchronous network I/O and supports basic RTMP commands and
-## control messages. The server can be extended to handle incoming streams as
-## needed.
+##
+## It uses powpow for asynchronous network I/O and supports basic RTMP commands and
+## control messages. The server can be extended to handle incoming streams as needed.
 
-import std/[posix, times, strutils, tables, sequtils]
-import pkg/libevent/bindings/[event, bufferevent, buffer, http, listener]
+import std/[times, tables, httpcore, json, jsonutils]
 
-import ./server/[actionmessage, chunkstream, rtmpmonitor]
+import powpow
+import powpow/proto/httpserver
+
+import ./server/[actionmessage, chunkstream, rtmpmonitor, handshake]
 import ./private/memutils
 
 from std/net import Port, `$`
 
 const
   DEFAULT_RTMP_PORT* = 1935
-    ## Default port for RTMP servers to listen on
   RTMP_HANDSHAKE_SIZE* = 1536
-    ## RTMP handshake S1/S2 size in bytes
-  MAX_SUBSCRIBER_OUTBUF* = 3 * (1024 * 1024) # 3MB
-    ## todo allow for configurable limits and better
-    ## backpressure handling
+  MAX_SUBSCRIBER_OUTBUF* = 3 * (1024 * 1024)
   SLOW_SUBSCRIBER_RESUME_OUTBUF = MAX_SUBSCRIBER_OUTBUF div 2
-    ## we can resume sending to them once their outbuf drops below this threshold
 
-# RTMP state / types
 const
   HS_INIT* = 0
-    ## Initial state before handshake starts
   HS_S0S1_SENT* = 1
-    ## Handshake state after sending S0 and S1, waiting for S0S1S2 from client
   HS_DONE* = 2
-    ## Handshake complete, ready for RTMP messages
   RTMP_DEFAULT_CHUNK_SIZE* = 128
-    ## Default RTMP chunk size before any SetChunkSize messages are processed
   RTMP_MAX_CHUNK_SIZE* = 65536
-    ## Maximum RTMP chunk size supported by this implementation (for sanity checking)
 
 proc epochMs(): int64 {.inline.} =
   int64(times.epochTime() * 1000.0)
-
-type
-  SharedPayload = ref object
-    refs: int
-      # Reference count for this payload; used for
-      # zero-copy streaming to manage memory across connections
-    bytes: seq[byte]
-      # Shared payload data for zero-copy streaming.
-      # Reference counted to manage memory across connections
-
-  RtmpConnState* = object
-    ## Per-connection RTMP state, including chunk sizes, acknowledgment tracking, and stream state
-    peerChunkSize*: int
-      ## Chunk size specified by the peer (client), used
-      ## for parsing incoming messages
-    localChunkSize*: int
-      ## Chunk size we use for sending messages to the peer;
-      ## can be adjusted with SetChunkSize
-    windowAckSize*: uint32
-      ## Acknowledgment window size specified by the peer;
-      ## we track how many bytes we've received since the last ACK
-    bytesReceivedSinceAck*: uint64
-      ## Counter for bytes received since last acknowledgment sent to peer
-    streams*: Table[int, pointer] # placeholder
-      ## Table of active streams by stream ID; can be used
-      ## to track per-stream state if needed
-  
-  RtmpServerSettings* = object
-    enableRestApi*: bool = true
-      ## Whether to enable the REST API for stream management (default: true)
-    restApiPort*: Port = Port(4000)
-      ## Port for the REST API listener (default: 4000)
-    rtmpPort*: Port = Port(DEFAULT_RTMP_PORT)
-      ## Port for the RTMP server to listen on (default: 1935)
-    # todo: add more settings here as needed (e.g., max connections, timeouts, etc)
-
-  RtmpServer* = ref object
-    ## Main RTMP server object holding the server context and any global state
-    base*: ptr event_base
-      ## Libevent base for managing events
-    listenFd*: cint
-      ## File descriptor for the listening socket
-    restApiListener*: ptr evconnlistener
-      ## Listener used by the REST API HTTP server
-    restApiHttp*: ptr evhttp
-      ## Libevent HTTP server handle for REST API
-    settings*: RtmpServerSettings
-      ## Configuration settings for the RTMP server
-
-  RTMPServerError* = object of CatchableError
-
-  ConnCtx* = ref object
-    bev*: ptr bufferevent
-      ## Libevent buffer event for this connection, used for reading/writing data
-    state*: RtmpConnState
-      ## Per-connection RTMP protocol state (chunk sizes, ack window, stream table, etc)
-    inbuf*: ptr Evbuffer
-      ## Input buffer for reading incoming data from the client
-    outbuf*: ptr Evbuffer
-      ## Output buffer for writing outgoing data to the client
-    hsState*: int
-      ## Handshake state: HS_INIT, HS_S0S1_SENT, or HS_DONE
-    partialHdr*: seq[byte]
-      ## Buffer for accumulating partial RTMP chunk headers across reads
-    partialMsg*: seq[byte]
-      ## Buffer for accumulating partial RTMP chunk payloads across reads
-    expectedMsgLen*: int
-      ## Expected length of the current RTMP message being assembled
-    msgTypeId*: int
-      ## RTMP message type ID of the current message being parsed
-    msgStreamId*: int
-      ## RTMP message stream ID of the current message being parsed
-    chunkCtx*: ChunkStreamCtx
-      ## Per-connection chunk stream context for parsing RTMP chunks
-    serverS1*: seq[byte]
-      ## Server's S1 handshake data (used to validate C2 from client)
-    nextStreamId*: int
-      ## Next available stream ID to assign for createStream requests
-    connId*: int
-      ## Unique connection ID for debugging and tracking
-    clientIp*: string
-      ## IP address of the connected client (for logging and monitoring)
-    closed*: bool
-      ## True if this connection has been closed and cleaned up
-    closeReason*: string
-      ## Reason for connection closure (e.g., "EOF", "ERROR", "cleanup")
-    publishedStreamName*: string
-      ## Name of the stream this connection is publishing (if any)
-    publishedStreamId*: int
-      ## Stream ID assigned to the published stream (if any)
-    subscriptions*: Table[string, int]
-      ## Map of stream name to stream ID for all streams this connection is subscribed to
-    streamNameById*: Table[int, string]
-      ## Map of stream ID to stream name for reverse lookup when sending messages
-    slowSubscriber*: bool
-      ## true when subscriber output queue exceeded MAX_SUBSCRIBER_OUTBUF
-    pausedSubscriber*: bool
-      ## true when subscriber is paused (not receiving messages) due to slowSubscriber or manual pause
-    waitForKeyframe*: bool
-      ## when recovering from lag, drop media until next video keyframe
-    lastLiveJumpMs*: int64
-      ## Last time this subscriber was force-jumped to live
-    recoveringUntilMs*: int64
-      ## If recovering from lag, ignore media until this timestamp to allow jump-to-live recovery
-
-proc sendAmfCommand(conn: ConnCtx; msgStreamId: int; vals: seq[AMF0Value])
-proc sendRtmpMessage(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int; payload: seq[byte]; timestamp: int = 0): bool {.discardable.}
-proc sendRtmpMessageShared(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int; sp: SharedPayload; timestamp: int = 0): bool {.discardable.}
-proc removeSubscriber(name: string, conn: ConnCtx)
-proc connSummary(conn: ConnCtx): string
-
-# Helpers
-proc setReuseAndNonblock(fd: cint) =
-  var one: cint = 1
-  discard setsockopt(SocketHandle(fd), SOL_SOCKET, SO_REUSEADDR, addr one, SockLen(sizeof(one)))
-  var flags = fcntl(fd, F_GETFL, 0)
-  if flags >= 0:
-    discard fcntl(fd, F_SETFL, flags or O_NONBLOCK)
 
 proc buildServerS1(): seq[byte] =
   var s = newSeq[byte](RTMP_HANDSHAKE_SIZE)
@@ -174,50 +46,77 @@ proc buildServerS1(): seq[byte] =
     s[i] = byte((ts + i) and 0xFF)
   s
 
+type
+  RtmpConnState* = object
+    peerChunkSize*: int
+    localChunkSize*: int
+    windowAckSize*: uint32
+    bytesReceivedSinceAck*: uint64
+    streams*: Table[int, pointer]
+
+  RtmpServerSettings* = object
+    enableRestApi*: bool = true
+    restApiPort*: Port = Port(4000)
+    rtmpPort*: Port = Port(DEFAULT_RTMP_PORT)
+
+  RtmpServer* = ref object
+    loop*: Loop
+    httpServer*: HttpServer
+    settings*: RtmpServerSettings
+
+  RTMPServerError* = object of CatchableError
+
+  ConnCtx* = ref object
+    conn*: Connection
+    state*: RtmpConnState
+    hsState*: int
+    partialHdr*: seq[byte]
+    partialMsg*: seq[byte]
+    expectedMsgLen*: int
+    msgTypeId*: int
+    msgStreamId*: int
+    chunkCtx*: ChunkStreamCtx
+    serverS1*: seq[byte]
+    nextStreamId*: int
+    connId*: int
+    clientIp*: string
+    closed*: bool
+    closeReason*: string
+    publishedStreamName*: string
+    publishedStreamId*: int
+    subscriptions*: Table[string, int]
+    streamNameById*: Table[int, string]
+    slowSubscriber*: bool
+    pausedSubscriber*: bool
+    waitForKeyframe*: bool
+    lastLiveJumpMs*: int64
+    recoveringUntilMs*: int64
+
+proc sendAmfCommand(conn: ConnCtx; msgStreamId: int; vals: seq[AMF0Value])
+proc sendRtmpMessage(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int; payload: seq[byte]; timestamp: int = 0): bool {.discardable.}
+proc removeSubscriber(name: string, conn: ConnCtx)
+proc connSummary(conn: ConnCtx): string
+
 var
-  gConnKeepAlive = initTable[pointer, ConnCtx]()
-  gSharedKeepAlive = initTable[pointer, SharedPayload]()
-  gPendingClientIp = initTable[pointer, string]()
   gNextConnId = 1
 
 #
-# Shared payload management for zero-copy streaming
+# Shared payload management for zero-copy streaming (simplified)
 #
-proc sharedRetain(sp: SharedPayload) =
-  if sp == nil: return
-  if sp.refs == 0:
-    gSharedKeepAlive[cast[pointer](sp)] = sp
-  inc sp.refs
-
-proc sharedRelease(sp: SharedPayload) =
-  if sp == nil: return
-  if sp.refs <= 0: return
-  dec sp.refs
-  if sp.refs == 0:
-    let k = cast[pointer](sp)
-    if gSharedKeepAlive.hasKey(k):
-      gSharedKeepAlive.del(k)
-
-proc evbufRefCleanup(data: pointer, datlen: csize_t, cleanupArg: pointer) {.cdecl.} =
-  if cleanupArg == nil: return
-  let sp = cast[SharedPayload](cleanupArg)
-  sharedRelease(sp)
+type
+  SharedPayload = ref object
+    bytes: seq[byte]
 
 proc newSharedPayload(payloadPtr: pointer, payloadLen: int): SharedPayload =
-  result = SharedPayload(refs: 0, bytes: @[])
-  if payloadLen <= 0 or payloadPtr == nil:
-    return
+  result = SharedPayload(bytes: @[])
+  if payloadLen <= 0 or payloadPtr == nil: return
   result.bytes = newSeq[byte](payloadLen)
   copyMem(addr result.bytes[0], payloadPtr, payloadLen)
 
-
 proc monitorAddStream*(name: string, pubConn: ConnCtx) =
-  ## Add a new stream to the monitor with the given name and publisher connection
   var pub = RtmpPublisher(id: $pubConn.connId, ip: pubConn.clientIp, published_at: toUnix(toTime(now())))
   let stream = RtmpStream(
-    id: name,
-    publisher: pub,
-    created_at: toUnix(toTime(now()))
+    id: name, publisher: pub, created_at: toUnix(toTime(now()))
   )
   gMonitor.streams[name] = stream
 
@@ -225,8 +124,6 @@ proc monitorRemoveStream*(name: string) =
   gMonitor.streams.del(name)
 
 proc monitorAddSubscriber*(streamName: string, subConn: ConnCtx) =
-  ## Add a subscriber to the monitor's stream entry for the given
-  ## stream name and subscriber connection
   if gMonitor.streams.hasKey(streamName):
     let sub = RtmpSubscriber(id: $subConn.connId, ip: subConn.clientIp, subscribed_at: toUnix(toTime(now())))
     gMonitor.streams[streamName].subscribers.add(sub)
@@ -245,37 +142,17 @@ proc monitorRemoveSubscriber*(streamName: string, subConn: ConnCtx) =
 #
 type
   SubscriberEntry* = object
-    ## Represents a subscriber to a stream, holding the connection context
-    ## and assigned message stream ID for sending messages to this subscriber
     conn*: ConnCtx
-      ## Connection of the subscriber
     msgStreamId*: int
-      ## Stream ID assigned to this subscription for
-      ## sending messages to the subscriber
 
   StreamEntry* = ref object
-    ## Represents a published stream, holding the publisher connection,
-    ## assigned stream ID, list of subscribers, and cached metadata/sequence
-    ## headers for new subscribers
     name*: string
-      ## Name of the stream (e.g., "live/streamKey")
     publisher*: ConnCtx
-      ## Connection that is publishing this stream (if any)
     publisherStreamId*: int
-      ## Stream ID assigned to the publisher's stream for this stream name
     subscribers*: seq[SubscriberEntry]
-      ## List of subscribers to this stream
-    # cached payloads to send to new subscribers
     metaPayload*: seq[byte]
-      ## Cached metadata payload (RTMP message type 18) to
-      ## send to new subscribers for stream initialization
     videoSeqPayload*: seq[byte]
-      ## Cached video sequence header payload (RTMP message type 9)
-      ## to send to new subscribers for stream initialization
     audioSeqPayload*: seq[byte]
-      ## Cached audio sequence header payload (RTMP message type 8)
-      ## to send to new subscribers for stream initialization
-
 
 let
   kAmfNull = newNull()
@@ -295,33 +172,17 @@ let
     "capabilities": newNumber(31.0)
   })
 
-  kInfoPlayReset = amfObj({
-    "level": newString("status"),
-    "code": newString("NetStream.Play.Reset"),
-    "description": newString("Resetting play state.")
-  })
-
   kInfoPlayStop = amfObj({
     "level": newString("status"),
     "code": newString("NetStream.Play.Stop"),
     "description": newString("Stream ended")
   })
 
-  kInfoStreamNotFound = amfObj({
-    "level": newString("error"),
-    "code": newString("NetStream.Play.StreamNotFound"),
-    "description": newString("Stream not found")
-  })
-
 var gStreams = initTable[string, StreamEntry]()
 
 proc drainOutputQueue(conn: ConnCtx) =
-  if conn == nil or conn.bev == nil: return
-  let output = bufferevent_get_output(conn.bev)
-  if output == nil: return
-  let q = evbuffer_get_length(output)
-  if q > 0:
-    discard evbuffer_drain(output, q)
+  if conn == nil or conn.conn == nil: return
+  discard conn.conn.flushWriteBuffer()
 
 proc addPublisher(name: string, conn: ConnCtx, pubStreamId: int) =
   if name.len == 0 or conn == nil: return
@@ -334,39 +195,27 @@ proc addPublisher(name: string, conn: ConnCtx, pubStreamId: int) =
     se.publisherStreamId = pubStreamId
   conn.publishedStreamName = name
   conn.publishedStreamId = pubStreamId
-
-  if gStreams.hasKey(name):
-    let tse = gStreams[name]
   monitorAddStream(name, conn)
-  # clear prev cached seq headers when a new publisher arrives
   se.metaPayload.setLen(0)
   se.videoSeqPayload.setLen(0)
   se.audioSeqPayload.setLen(0)
 
 proc addSubscriber(name: string, conn: ConnCtx, subStreamId: int, skipInitSend: bool = false) =
   if name.len == 0 or conn == nil: return
-  # avoid duplicate subscription entries
   if conn.subscriptions.hasKey(name) and conn.subscriptions[name] == subStreamId:
     return
-
   var se = gStreams.getOrDefault(name, nil)
   if se == nil:
     se = StreamEntry(name: name)
     gStreams[name] = se
-
-  # avoid duplicate subscriber entries in stream
   for s in se.subscribers:
     if s.conn == conn and s.msgStreamId == subStreamId:
       conn.subscriptions[name] = subStreamId
       conn.streamNameById[subStreamId] = name
       return
-
   se.subscribers.add(SubscriberEntry(conn: conn, msgStreamId: subStreamId))
   conn.subscriptions[name] = subStreamId
   conn.streamNameById[subStreamId] = name
-
-  # send cached meta and sequence headers (if any)
-  # so the new subscriber can initialize decoders
   if not skipInitSend:
     if se.metaPayload.len > 0:
       if not sendRtmpMessage(conn, csid = 4, msgTypeId = 18, msgStreamId = subStreamId, payload = se.metaPayload):
@@ -385,25 +234,18 @@ proc addSubscriber(name: string, conn: ConnCtx, subStreamId: int, skipInitSend: 
 proc removeSubscriber(name: string, conn: ConnCtx) =
   if name.len == 0 or conn == nil: return
   let se = gStreams.getOrDefault(name, nil)
-  if se == nil: return # no stream entry, nothing to remove
-  
+  if se == nil: return
   let sid = conn.subscriptions.getOrDefault(name, 0)
-
   var o: seq[SubscriberEntry] = @[]
   for s in se.subscribers:
     if s.conn != conn:
       o.add(s)
   se.subscribers = o
-  
-  # also remove from conn's subscription table
   if conn.subscriptions.hasKey(name):
     conn.subscriptions.del(name)
-
   if sid != 0 and conn.streamNameById.hasKey(sid):
     if conn.streamNameById[sid] == name:
       conn.streamNameById.del(sid)
-
-  # prune empty placeholder streams (no publisher + no subscribers)
   if se.publisher == nil and se.subscribers.len == 0 and gStreams.hasKey(name):
     gStreams.del(name)
   monitorRemoveSubscriber(name, conn)
@@ -412,33 +254,24 @@ proc removeSubscriber(name: string, conn: ConnCtx) =
 proc pauseSubscriber(name: string, conn: ConnCtx) =
   if name.len == 0 or conn == nil: return
   let se = gStreams.getOrDefault(name, nil)
-  if se == nil: return # no stream entry, nothing to pause
-  
-  # Remove this subscriber entry from the stream's list so re-subscribe is clean.
+  if se == nil: return
   var kept: seq[SubscriberEntry] = @[]
   for s in se.subscribers:
     if s.conn != conn:
       kept.add(s)
   se.subscribers = kept
-
-  # mark subscriber as paused/slow so fanout skips it
   conn.slowSubscriber = true
   conn.pausedSubscriber = true
-
   if conn.subscriptions.hasKey(name):
-    # also remove from conn's subscription table
     conn.subscriptions.del(name)
   if se.publisher == nil and se.subscribers.len == 0 and gStreams.hasKey(name):
-    # prune empty placeholder streams (no publisher + no subscribers)
     gStreams.del(name)
   monitorRemoveSubscriber(name, conn)
 
 proc removePublisher(name: string) =
-  # When a publisher disconnects, we remove the stream and notify all subscribers that the stream has ended
   if name.len == 0: return
   if gStreams.hasKey(name):
     let se = gStreams[name]
-    # notify subscribers that stream ended
     for s in se.subscribers:
       if s.conn != nil:
         sendAmfCommand(s.conn, s.msgStreamId, @[ kAmfCmdOnStatus, kAmfNum0, kAmfNull, kInfoPlayStop ])
@@ -452,11 +285,8 @@ proc cleanupConn(conn: ConnCtx) =
   conn.closed = true
   if conn.closeReason.len == 0:
     conn.closeReason = "cleanup"
-
   if conn.publishedStreamName.len > 0:
     removePublisher(conn.publishedStreamName)
-
-  # IMPORTANT: do not mutate table while iterating it
   var subNames: seq[string] = @[]
   for name, _ in conn.subscriptions.pairs:
     subNames.add(name)
@@ -484,47 +314,9 @@ proc connSummary(conn: ConnCtx): string =
     " pubStreamId=" & $conn.publishedStreamId &
     " subs=" & $conn.subscriptions.len
 
-proc bev_event_cb(bev: ptr bufferevent, what: cshort, ctx: pointer) {.cdecl.} =
-  # Event callback: ensure ConnCtx is freed when connection
-  # closes/errors to prevent memory leaks; also log events
-  # for debugging
-  let cbarg = ctx
-  # echo "bev_event: conn=", $(cast[int](cbarg)), " what=", what,
-  #      " flags=",(if (what and BEV_EVENT_CONNECTED) != 0: " CONNECTED" else: ""),
-  #      (if (what and BEV_EVENT_EOF) != 0: " EOF" else: ""),
-  #      (if (what and BEV_EVENT_ERROR) != 0: " ERROR" else: ""),
-  #      (if (what and BEV_EVENT_TIMEOUT) != 0: " TIMEOUT" else: "")
-  if cbarg != nil and gConnKeepAlive.hasKey(cbarg):
-    let conn = gConnKeepAlive[cbarg]
-    # echo "  ", connSummary(conn), " hsState=", conn.hsState, " closed=", conn.closed
-
-  let
-    isEof = (what and BEV_EVENT_EOF) != 0
-    isErr = (what and BEV_EVENT_ERROR) != 0
-  if not (isEof or isErr): return
-
-  if bev != nil:
-    let k = cast[pointer](bev)
-    if gPendingClientIp.hasKey(k):
-      gPendingClientIp.del(k)
-
-  if cbarg != nil and gConnKeepAlive.hasKey(cbarg):
-    let conn = gConnKeepAlive[cbarg]
-    cleanupConn(conn)
-    conn.closeReason = (if isErr: "ERROR" else: "EOF")
-    conn.bev = nil
-    conn.inbuf = nil
-    conn.outbuf = nil
-    gConnKeepAlive.del(cbarg)
-
-  # Free exactly once
-  if bev != nil:
-    bufferevent_free(bev)
-
-# 
-# RTMP output helpers (very small)
-# 
-
+#
+# RTMP output helpers
+#
 proc put3BE(outp: var seq[byte], v: int) =
   outp.add(byte((v shr 16) and 0xFF))
   outp.add(byte((v shr 8) and 0xFF))
@@ -542,70 +334,10 @@ proc put4LE(outp: var seq[byte], v: int) =
   outp.add(byte((v shr 16) and 0xFF))
   outp.add(byte((v shr 24) and 0xFF))
 
-proc sendRtmpMessageShared(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int; sp: SharedPayload; timestamp: int = 0): bool =
-  if conn == nil or conn.bev == nil or sp == nil: return false
-  let payloadLen = sp.bytes.len
+proc sendRtmpMessage(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int; payload: seq[byte]; timestamp: int = 0): bool =
+  if conn == nil or conn.conn == nil: return false
   if csid <= 1 or csid >= 64:
     raise newException(RTMPServerError, "Only CSID 2..63 supported in this minimal sender")
-  if payloadLen < 0: return false
-
-  let chunkSize = max(conn.state.localChunkSize, 1)
-  let ts = max(0, min(timestamp, 0xFFFFFF))
-  let output = bufferevent_get_output(conn.bev)
-  if output == nil: return false
-
-  var h: array[12, byte]
-  h[0] = byte((0 shl 6) or (csid and 0x3F))
-  h[1] = byte((ts shr 16) and 0xFF)
-  h[2] = byte((ts shr 8) and 0xFF)
-  h[3] = byte(ts and 0xFF)
-  h[4] = byte((payloadLen shr 16) and 0xFF)
-  h[5] = byte((payloadLen shr 8) and 0xFF)
-  h[6] = byte(payloadLen and 0xFF)
-  h[7] = byte(msgTypeId and 0xFF)
-  h[8]  = byte(msgStreamId and 0xFF)
-  h[9]  = byte((msgStreamId shr 8) and 0xFF)
-  h[10] = byte((msgStreamId shr 16) and 0xFF)
-  h[11] = byte((msgStreamId shr 24) and 0xFF)
-
-  if evbuffer_add(output, addr h[0], csize_t(h.len)) != 0:
-    return false
-  if payloadLen == 0:
-    return true
-
-  var off = 0
-  var cont: byte = byte((3 shl 6) or (csid and 0x3F))
-
-  while off < payloadLen:
-    # Add a chunk of the payload as a reference to avoid copying; if the
-    # payload is larger than the chunk size, we add continuation headers and more references as needed
-    let take = min(chunkSize, payloadLen - off)
-    if take > 0:
-      sharedRetain(sp)
-      let rc = evbuffer_add_reference(
-        output,
-        cast[pointer](unsafeAddr sp.bytes[off]),
-        csize_t(take),
-        evbufRefCleanup,
-        cast[pointer](sp)
-      )
-      if rc != 0:
-        sharedRelease(sp)
-        return false
-      off += take
-    if off < payloadLen:
-      if evbuffer_add(output, addr cont, 1) != 0:
-        # If we fail to add the continuation header, we need to
-        # clean up any references already added for this message
-        return false
-  result = true
-
-proc sendRtmpMessage(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int; payload: seq[byte]; timestamp: int = 0): bool =
-  # Use zero-copy for cached payloads (AMF/meta/seq headers)
-  if conn == nil or conn.bev == nil: return false
-  if csid <= 1 or csid >= 64:
-    raise newException(RTMPServerError,
-        "Only CSID 2..63 supported in this minimal sender")
 
   let chunkSize = max(conn.state.localChunkSize, 1)
   var buf: seq[byte] = @[]
@@ -619,7 +351,7 @@ proc sendRtmpMessage(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int;
   buf.add(byte(msgTypeId and 0xFF))
   put4LE(buf, msgStreamId)
 
-  # payload split into chunks; continuation chunks use fmt=3
+  # payload split into chunks
   var off = 0
   while off < payload.len:
     let take = min(chunkSize, payload.len - off)
@@ -629,41 +361,64 @@ proc sendRtmpMessage(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int;
     if off < payload.len:
       buf.add(byte((3 shl 6) or (csid and 0x3F)))
 
-  let rc = bufferevent_write(conn.bev, buf[0].addr, csize_t(buf.len))
-  return rc == 0
+  let rc = conn.conn.send(buf)
+  return rc > 0
+
+proc sendRtmpMessageShared(conn: ConnCtx; csid: int; msgTypeId: int; msgStreamId: int; sp: SharedPayload; timestamp: int = 0): bool =
+  if conn == nil or conn.conn == nil or sp == nil: return false
+  let payloadLen = sp.bytes.len
+  if csid <= 1 or csid >= 64:
+    raise newException(RTMPServerError, "Only CSID 2..63 supported in this minimal sender")
+  if payloadLen < 0: return false
+
+  let chunkSize = max(conn.state.localChunkSize, 1)
+  let ts = max(0, min(timestamp, 0xFFFFFF))
+
+  var buf: seq[byte] = @[]
+
+  # fmt=0 basic header + message header (12 bytes)
+  buf.add(byte((0 shl 6) or (csid and 0x3F)))
+  put3BE(buf, ts)
+  put3BE(buf, payloadLen)
+  buf.add(byte(msgTypeId and 0xFF))
+  put4LE(buf, msgStreamId)
+
+  # payload split into chunks with continuation headers
+  var off = 0
+  while off < payloadLen:
+    let take = min(chunkSize, payloadLen - off)
+    if take > 0:
+      buf.add(sp.bytes[off ..< off + take])
+      off += take
+    if off < payloadLen:
+      buf.add(byte((3 shl 6) or (csid and 0x3F)))
+
+  let rc = conn.conn.send(buf)
+  return rc > 0
 
 proc sendSetChunkSize(conn: ConnCtx; size: int) =
-  # Client tells us preferred chunk size for messages it sends.
-  # should use this for parsing incoming messages
   var p: seq[byte] = @[]
   put4BE(p, uint32(size))
   sendRtmpMessage(conn, csid = 2, msgTypeId = 1, msgStreamId = 0, payload = p)
 
 proc sendWindowAckSize(conn: ConnCtx; size: uint32) =
-  # Client tells us preferred window size for acknowledgments.
-  # track bytes received and send ACKs when crossing this threshold
   var p: seq[byte] = @[]
   put4BE(p, size)
   sendRtmpMessage(conn, csid = 2, msgTypeId = 5, msgStreamId = 0, payload = p)
 
 proc sendSetPeerBandwidth(conn: ConnCtx; size: uint32; limitType: byte = 2) =
-  # limitType: 0=hard,1=soft,2=dynamic
   var p: seq[byte] = @[]
   put4BE(p, size)
-  p.add(limitType) # 0=hard,1=soft,2=dynamic
+  p.add(limitType)
   sendRtmpMessage(conn, csid = 2, msgTypeId = 6, msgStreamId = 0, payload = p)
 
 proc sendAcknowledgement(conn: ConnCtx; seq: uint32) =
-  # Client acknowledging bytes we've received.
-  # should be sent when bytesReceivedSinceAck crosses the windowAckSize threshold
   var p: seq[byte] = @[]
   put4BE(p, seq)
   sendRtmpMessage(conn, csid = 2, msgTypeId = 3, msgStreamId = 0, payload = p)
 
 proc sendUserControlStreamBegin(conn: ConnCtx; streamId: int) =
-  # User Control message: Stream Begin (type 4) with stream ID in payload
   var p: seq[byte] = @[]
-  # eventType (2 bytes BE) = 0 (StreamBegin)
   p.add(byte(0)); p.add(byte(0))
   put4BE(p, uint32(streamId))
   sendRtmpMessage(conn, csid = 2, msgTypeId = 4, msgStreamId = 0, payload = p)
@@ -687,110 +442,69 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
   let c = cast[ConnCtx](arg)
   if c == nil: return
 
-  # Diagnostic: log every incoming chunk message
-  # echo "onChunkMessage: type=", msgTypeId, " stream=", msgStreamId, " len=", payloadLen
-  if payloadLen > 0 and payloadPtr != nil:
-    let dumpN = if payloadLen < 16: payloadLen else: 16
-    let bp = cast[ptr UncheckedArray[byte]](payloadPtr)
-    var hs = ""
-    for i in 0 ..< dumpN:
-      hs.add($((bp[i] shr 4) and 0xF))
-      hs.add($((bp[i]) and 0xF))
-      hs.add(' ')
-    # echo "  data (first ", dumpN, " bytes): ", hs
-
-  # Protocol control: Set Chunk Size (type 1, 4 bytes BE)
   if msgTypeId == 1 and payloadLen >= 4 and payloadPtr != nil:
     let b = cast[ptr UncheckedArray[byte]](payloadPtr)
-    let newSize =
-      (int(b[0]) shl 24) or (int(b[1]) shl 16) or (int(b[2]) shl 8) or int(b[3])
+    let newSize = (int(b[0]) shl 24) or (int(b[1]) shl 16) or (int(b[2]) shl 8) or int(b[3])
     if newSize > 0 and newSize <= RTMP_MAX_CHUNK_SIZE:
       c.state.peerChunkSize = newSize
       setPeerChunkSize(c.chunkCtx, newSize)
-      # echo "peer chunk size set to ", newSize
     return
 
-  # Window Acknowledgement Size (type 5): client tells us preferred ACK window
   if msgTypeId == 5 and payloadLen >= 4 and payloadPtr != nil:
     let b = cast[ptr UncheckedArray[byte]](payloadPtr)
     let win = (uint32(b[0]) shl 24) or (uint32(b[1]) shl 16) or (uint32(b[2]) shl 8) or uint32(b[3])
     c.state.windowAckSize = win
     c.state.bytesReceivedSinceAck = 0'u64
-    # echo "Client requested windowAckSize=", win
     return
 
-  # Set Peer Bandwidth (type 6): client informs us of bandwidth settings
   if msgTypeId == 6 and payloadLen >= 5 and payloadPtr != nil:
-    let b = cast[ptr UncheckedArray[byte]](payloadPtr)
-    let bw = (uint32(b[0]) shl 24) or (uint32(b[1]) shl 16) or (uint32(b[2]) shl 8) or uint32(b[3])
-    let limitType = b[4]
-    # echo "Client SetPeerBandwidth: ", bw, " type=", limitType
     return
 
-  # Acknowledgement (type 3): client acknowledging bytes we've sent
   if msgTypeId == 3 and payloadLen >= 4 and payloadPtr != nil:
-    let b = cast[ptr UncheckedArray[byte]](payloadPtr)
-    let ack = (uint32(b[0]) shl 24) or (uint32(b[1]) shl 16) or (uint32(b[2]) shl 8) or uint32(b[3])
-    # echo "Client ACK: ", ack
     return
 
-  # Abort message (type 2): client requests abort of a stream id in payload
   if msgTypeId == 2 and payloadLen >= 4 and payloadPtr != nil:
     let b = cast[ptr UncheckedArray[byte]](payloadPtr)
     let abortCsid = (int(b[0]) shl 24) or (int(b[1]) shl 16) or (int(b[2]) shl 8) or int(b[3])
-    # echo "Client Abort for CSID: ", abortCsid
-    # remove any per-chunkstream state
     if c.chunkCtx != nil:
       c.chunkCtx.streams.del(abortCsid)
     return
 
-  # User control (type 4) can be used for StreamBegin/EOF etc; log minimal info
   if msgTypeId == 4 and payloadLen >= 2 and payloadPtr != nil:
-    let b = cast[ptr UncheckedArray[byte]](payloadPtr)
-    let eventType = (int(b[0]) shl 8) or int(b[1])
-    # echo "UserControl event: ", eventType
     return
 
-  # Commands/data: AMF0 (type 20/18) and AMF3 (type 17/15 with AMF0 marker)
   if (msgTypeId == 20 or msgTypeId == 18 or msgTypeId == 17 or msgTypeId == 15) and payloadLen > 0 and payloadPtr != nil:
     var amfPtr = payloadPtr
     var amfLen = payloadLen
     let isDataMsg = (msgTypeId == 18 or msgTypeId == 15)
     if msgTypeId == 17 or msgTypeId == 15:
-      # AMF3 commands/data often start with 0x00 indicating AMF0 encoding
       let b = cast[ptr UncheckedArray[byte]](payloadPtr)
       if payloadLen >= 1 and b[0] == 0'u8:
         amfPtr = cast[ptr byte](addr b[1])
         amfLen = payloadLen - 1
       else:
-        # Unsupported AMF3 payload; ignore for now
         return
     var vals: seq[AMF0Value]
     try:
       vals = decodeAllAMF0Ptr(amfPtr, amfLen)
     except:
-      # echo "AMF0 decode error payloadLen=", amfLen
-      # show a small hex snippet to aid debugging
-      let maxDump = if amfLen < 64: amfLen else: 64
-      let bptr = cast[ptr UncheckedArray[byte]](amfPtr)
-      var s = ""
-      for i in 0 ..< maxDump:
-        s.add($((bptr[i] shr 4) and 0xF))
-        s.add($((bptr[i]) and 0xF))
-        s.add(' ')
-      # echo "AMF0 payload hex (first ", maxDump, " bytes): ", s
-      
-      # Temporary safety: reply with a generic _result to avoid leaving client waiting
-      # echo "Sending generic _result txn=1 to avoid client hang"
-      sendAmfCommand(c, 0, @[ kAmfCmdResult, kAmfNum0, kAmfNull ])
-      return
+      discard
+
+    # Fallback: if AMF0 decoding failed and this looks like AMF3, try AMF3 decoder
+    if (vals.len == 0 or vals[0] == nil or
+        (vals[0].typ != AMF0_String and vals[0].typ != AMF0_LongString)):
+      if msgTypeId == 17 or msgTypeId == 15:
+        # AMF3 message types — try AMF3 decoding
+        var amf3data = newSeq[byte](amfLen)
+        copyMem(addr amf3data[0], amfPtr, amfLen)
+        try:
+          vals = decodeAllAMF3(amf3data)
+        except:
+          discard
 
     if vals.len == 0 or vals[0] == nil or (vals[0].typ != AMF0_String and vals[0].typ != AMF0_LongString):
-      if isDataMsg:
-        # allow data messages to fall through to forwarding/caching
-        discard
-      else:
-        return
+      if isDataMsg: discard
+      else: return
     let cmd = vals[0].s
     let txn = getTxnId(vals)
 
@@ -798,7 +512,6 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
       var wantsPause = true
       if vals.len >= 4 and vals[3] != nil and vals[3].typ == AMF0_Boolean:
         wantsPause = vals[3].b
-      
       let sid = msgStreamId
       var streamName = c.streamNameById.getOrDefault(sid, "")
       if streamName.len == 0:
@@ -806,18 +519,12 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
           if sId == sid:
             streamName = n
             break
-
       let isSubscribedNow = c.subscriptions.hasKey(streamName) and c.subscriptions[streamName] == sid
       if wantsPause:
         if isSubscribedNow:
-          # echo "Pausing subscription to stream '", streamName, "' for connId=", $c.connId
           pauseSubscriber(streamName, c)
           c.pausedSubscriber = true
           drainOutputQueue(c)
-          let output = bufferevent_get_output(c.bev)
-          if output != nil:
-            let q = evbuffer_get_length(output)
-            if q > 0: discard evbuffer_drain(output, q)
           let info = amfObj({
             "level": newString("status"),
             "code": newString("NetStream.Pause.Notify"),
@@ -825,18 +532,12 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
           })
           sendAmfCommand(c, sid, @[ newString("onStatus"), kAmfNum0, kAmfNull, info ])
       else:
-        # Always re-subscribe on unpause (restart stream from beginning)
         drainOutputQueue(c)
         let se = gStreams.getOrDefault(streamName, nil)
         if se != nil and se.publisher != nil:
-          # Remove and re-add subscriber to restart stream
           removeSubscriber(streamName, c)
-          addSubscriber(streamName, c, sid, false) # false = send init headers
-
-          # Send StreamBegin first
+          addSubscriber(streamName, c, sid, false)
           sendUserControlStreamBegin(c, sid)
-
-          # Send onStatus: NetStream.Play.Reset (optional) then NetStream.Play.Start
           let resetInfo = amfObj({
             "level": newString("status"),
             "code": newString("NetStream.Play.Reset"),
@@ -852,14 +553,11 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
           sendAmfCommand(c, sid, @[ newString("onStatus"), kAmfNum0, kAmfNull, startInfo ])
       return
 
-    # echo "AMF cmd: ", cmd, " txn=", txn, " msgStreamId=", msgStreamId
     if cmd == "connect":
-      # Minimal connection setup
       sendWindowAckSize(c, 5_000_000'u32)
       sendSetPeerBandwidth(c, 5_000_000'u32, 2)
       sendSetChunkSize(c, 4096)
       c.state.localChunkSize = 4096
-
       let props = amfObj({
         "fmsVer": newString("FMS/3,5,7,7009"),
         "capabilities": newNumber(31.0)
@@ -868,31 +566,24 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
       return
 
     if cmd == "releaseStream" or cmd == "FCPublish":
-      # Many encoders send these; respond with _result to unblock them.
       sendAmfCommand(c, 0, @[ kAmfCmdResult, newNumber(txn), kAmfNull, kAmfNull ])
       return
 
     if cmd == "createStream":
       let sid = c.nextStreamId
       c.nextStreamId.inc
-      # echo "createStream -> assigning sid=", sid, " txn=", txn
       sendAmfCommand(c, 0, @[ kAmfCmdResult, newNumber(txn), kAmfNull, newNumber(float64(sid)) ])
       return
-    
+
     if cmd == "publish":
-      # publish(streamName, publishType?)
       var streamName = ""
       for i in 1 ..< vals.len:
         if vals[i] != nil and vals[i].typ == AMF0_String:
           streamName = vals[i].s
           break
-
       let streamId = msgStreamId
       sendUserControlStreamBegin(c, streamId)
-
-      # register publisher
       addPublisher(streamName, c, streamId)
-
       let info = amfObj({
         "level": newString("status"),
         "code": newString("NetStream.Publish.Start"),
@@ -901,18 +592,14 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
       })
       sendAmfCommand(c, streamId, @[ newString("onStatus"), kAmfNum0, kAmfNull, info ])
       return
-    
-    # echo "Command: " & cmd
+
     if cmd == "play" or cmd == "play2":
-      # play(streamName, ...) - respond with StreamBegin and onStatus Play.Start
       var streamName = ""
       for i in 1 ..< vals.len:
         if vals[i] != nil and vals[i].typ == AMF0_String:
           streamName = vals[i].s
           break
-
       let sid = msgStreamId
-      # If there's no publisher for this stream, inform the player immediately
       let se = gStreams.getOrDefault(streamName, nil)
       if se == nil or se.publisher == nil:
         let nf = amfObj({
@@ -922,21 +609,14 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
         })
         sendAmfCommand(c, sid, @[ newString("onStatus"), kAmfNum0, kAmfNull, nf ])
         return
-
-      # Stream begin
       sendUserControlStreamBegin(c, sid)
-
-      # register subscriber mapping
       addSubscriber(streamName, c, sid)
-
-      # send onStatus: NetStream.Play.Reset (optional) then NetStream.Play.Start
       let resetInfo = amfObj({
         "level": newString("status"),
         "code": newString("NetStream.Play.Reset"),
         "description": newString("Resetting play state.")
       })
       sendAmfCommand(c, sid, @[ newString("onStatus"), kAmfNum0, kAmfNull, resetInfo ])
-
       let startInfo = amfObj({
         "level": newString("status"),
         "code": newString("NetStream.Play.Start"),
@@ -947,12 +627,10 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
       return
 
     if cmd == "getStreamLength":
-      # Some players query stream length before playing; reply with a numeric length (0.0 = unknown)
       sendAmfCommand(c, 0, @[ kAmfCmdResult, newNumber(txn), kAmfNull, kAmfNum0 ])
       return
 
     if cmd == "closeStream":
-      # closeStream: reply with _result if txn provided and cleanup subscriptions
       sendAmfCommand(c, msgStreamId, @[ kAmfCmdResult, newNumber(txn), kAmfNull ])
       removeSubscriptionsByStreamId(c, msgStreamId)
       if c.publishedStreamId == msgStreamId and c.publishedStreamName.len > 0:
@@ -962,7 +640,6 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
       return
 
     if cmd == "deleteStream":
-      # deleteStream: reply with _result and cleanup
       sendAmfCommand(c, msgStreamId, @[ kAmfCmdResult, newNumber(txn), kAmfNull ])
       removeSubscriptionsByStreamId(c, msgStreamId)
       if c.publishedStreamId == msgStreamId and c.publishedStreamName.len > 0:
@@ -972,7 +649,6 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
       return
 
     if cmd == "FCUnpublish" or cmd == "unpublish":
-      # explicit unpublish request from publisher
       if c.publishedStreamName.len > 0:
         removePublisher(c.publishedStreamName)
         reset(c.publishedStreamName)
@@ -984,19 +660,15 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
 
   # Forward media (audio/video) and metadata (AMF0 data type 18) from publisher to subscribers
   if (msgTypeId == 8 or msgTypeId == 9 or msgTypeId == 18) and payloadLen > 0 and payloadPtr != nil:
-    # find stream entry where this conn is publisher
     for name, se in gStreams.pairs:
       var matchPub = false
       if se.publisher == c and se.publisherStreamId == msgStreamId:
         matchPub = true
       elif c.publishedStreamName.len > 0 and se.name == c.publishedStreamName and se.publisherStreamId == msgStreamId:
-        # fallback: match by stream name if publisher pointer didn't line up
         matchPub = true
-      
       if not matchPub:
-        continue # not the stream we're publishing to
+        continue
 
-      # detect cache-worthy packets directly from payloadPtr (no copy yet)
       var
         isVideoSeq: bool
         isAudioSeq: bool
@@ -1021,20 +693,14 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
 
       var dropSubs: seq[SubscriberEntry] = @[]
       for s in se.subscribers:
-        if s.conn == nil or s.conn.bev == nil or s.conn.closed:
-          dropSubs.add(s)
-          continue
-
-        let output = bufferevent_get_output(s.conn.bev)
-        if output == nil:
+        if s.conn == nil or s.conn.conn == nil or s.conn.closed:
           dropSubs.add(s)
           continue
 
         let nowTick = epochMs()
-        let outq = cast[int](evbuffer_get_length(output))
+        # Detect slow subscriber: if sendfile is active or last send backed up
+        let outBusy = s.conn.conn.sendFileFd >= 0
 
-        # During short post-jump recovery, prioritize getting video back in sync.
-        # Drop non-key video and regular audio frames.
         if s.conn.recoveringUntilMs > nowTick:
           if msgTypeId == 9 and not isVideoKeyframe:
             continue
@@ -1042,11 +708,8 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
             continue
 
         if s.conn.slowSubscriber or s.conn.waitForKeyframe:
-          if outq > SLOW_SUBSCRIBER_RESUME_OUTBUF:
-            # queue still too large, keep waiting
+          if outBusy:
             continue
-
-          # send cached init payloads (meta/audio/video seq) before resuming
           if se.metaPayload.len > 0:
             sendRtmpMessage(s.conn, csid = 4, msgTypeId = 18,
                         msgStreamId = s.msgStreamId, payload = se.metaPayload)
@@ -1056,22 +719,19 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
           if se.videoSeqPayload.len > 0:
             sendRtmpMessage(s.conn, csid = 4, msgTypeId = 9,
                         msgStreamId = s.msgStreamId, payload = se.videoSeqPayload)
-
           s.conn.slowSubscriber = false
           s.conn.waitForKeyframe = false
           s.conn.recoveringUntilMs = 0
 
         if not sendRtmpMessageShared(s.conn, 4, msgTypeId, s.msgStreamId, shared, int(timestamp)):
-          # echo "Failed to send message to subscriber ", s.conn.connId, "; dropping subscriber"
           removeSubscriber(name, s.conn)
           dropSubs.add(s)
           continue
-        
-        # Post-jump grace: avoid immediate queue growth.
+
         if s.conn.recoveringUntilMs > nowTick:
           if msgTypeId == 9 and not isVideoKeyframe:
             continue
-          if msgTypeId == 8 and outq > (SLOW_SUBSCRIBER_RESUME_OUTBUF div 2):
+          if msgTypeId == 8 and outBusy:
             continue
 
       if dropSubs.len > 0:
@@ -1086,7 +746,6 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
             aliveSubs.add(s)
         se.subscribers = aliveSubs
 
-      # cache copy for future subscribers
       if needCache:
         if msgTypeId == 18:
           se.metaPayload = shared.bytes
@@ -1094,7 +753,7 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
           se.videoSeqPayload = shared.bytes
         elif isAudioSeq:
           se.audioSeqPayload = shared.bytes
-      break # found the stream, no need to check others
+      break
 
   # bookkeeping: count bytes received and send ACK when threshold hit
   if payloadLen > 0:
@@ -1104,188 +763,184 @@ proc onChunkMessage(msgTypeId: int, msgStreamId: int, timestamp: uint32,
       sendAcknowledgement(c, ackVal)
       c.state.bytesReceivedSinceAck = 0'u64
 
-# 
-# Read callback
-# 
-# initially attach with nil cbarg; bev_read_cb will create and reattach ConnCtx on first read
-proc bev_read_cb(bev: ptr bufferevent, ctx: pointer) {.cdecl.} =
-  var conn = cast[ConnCtx](ctx)
-  if conn == nil:
-    var resolvedIp: string
-    let bevKey = cast[pointer](bev)
-    if gPendingClientIp.hasKey(bevKey):
-      resolvedIp = gPendingClientIp[bevKey]
-      gPendingClientIp.del(bevKey)
+#
+# Read callback (powpow onData)
+#
+var gStaging = initTable[int, seq[byte]]()  # connId -> staging buffer for partial headers
 
-    var local = ConnCtx(
-      bev: bev,
-      state: RtmpConnState(
-        peerChunkSize: RTMP_DEFAULT_CHUNK_SIZE,
-        localChunkSize: RTMP_DEFAULT_CHUNK_SIZE, # keep 128 until you successfully send SetChunkSize
-        streams: initTable[int, pointer]()
-      ),
-      inbuf: bufferevent_get_input(bev),
-      outbuf: bufferevent_get_output(bev),
-      hsState: HS_INIT,
-      nextStreamId: 1,
-      connId: gNextConnId,
-      clientIp: resolvedIp,
-    )
-    gNextConnId.inc
-    conn = local
-    gConnKeepAlive[cast[pointer](conn)] = conn
+proc onClientData(conn: Connection, data: openArray[byte]) =
+  let c = cast[ConnCtx](conn.data)
+  if c == nil: return
 
-    conn.chunkCtx = initChunkStreamCtx(conn.state.peerChunkSize)
-    setOnMessage(conn.chunkCtx, onChunkMessage, cast[pointer](conn))
-    bufferevent_setcb(bev, bev_read_cb, nil, bev_event_cb, cast[pointer](conn))
+  let avail = data.len
+  if avail <= 0: return
 
-  let inbuf = bufferevent_get_input(bev)
+  # Prepend staged bytes from previous read if any
+  var feedData: seq[byte]
+  var hasStaging = false
+  if gStaging.hasKey(c.connId) and gStaging[c.connId].len > 0:
+    feedData = gStaging[c.connId]
+    feedData.add(data)
+    hasStaging = true
+    gStaging[c.connId].setLen(0)
+
+  let feedPtr = if hasStaging: cast[ptr byte](addr feedData[0])
+                else: cast[ptr byte](unsafeAddr data[0])
+  let feedLen = if hasStaging: feedData.len
+                else: avail
 
   while true:
-    let avail = cast[int](evbuffer_get_length(inbuf))
-    if avail <= 0:
-      return
-    # echo "read-loop: conn=", $(cast[int](addr(conn))), " hsState=", conn.hsState, " avail=", avail
-    if conn.hsState == HS_INIT:
-      if avail < 1 + RTMP_HANDSHAKE_SIZE: return
-      let p = evbuffer_pullup(inbuf, 1 + RTMP_HANDSHAKE_SIZE)
-      if p == nil: return
-
-      let pbytes = cast[ptr UncheckedArray[byte]](p)
-      let c0 = pbytes[0]
-      # Expect RTMP version 3 (0x03) in C0; reject otherwise
-      if c0 != 0x03'u8:
-        # echo "Unsupported RTMP version: ", c0
-        # Close connection
-        if bev != nil:
-          bufferevent_free(bev)
+    if c.hsState == HS_INIT:
+      if feedLen < 1 + RTMP_HANDSHAKE_SIZE:
+        # Stage partial handshake bytes
+        if hasStaging and feedLen > 0:
+          gStaging[c.connId] = feedData
+        elif not hasStaging and feedLen > 0:
+          gStaging[c.connId] = @data
         return
 
+      let pbytes = cast[ptr UncheckedArray[byte]](feedPtr)
+      let c0 = pbytes[0]
+      if c0 != 0x03'u8:
+        conn.close()
+        return
+
+      let c1ptr = cast[ptr UncheckedArray[byte]](addr pbytes[1])
+      let enhanced = isEnhancedC1(c1ptr)
+
       var outS0 = [byte 0x03]
-      let s1 = buildServerS1()
-      # store server S1 to validate C2 later
-      conn.serverS1 = s1
+      discard conn.send(outS0)
 
-      let c1ptr = addr pbytes[1] # C1
+      if enhanced and validateC1Digest(c1ptr):
+        # Enhanced handshake: create S1 with HMAC digest using FMS key
+        var s1enh = newSeq[byte](RTMP_HANDSHAKE_SIZE)
+        createS1Enhanced(cast[ptr UncheckedArray[byte]](addr s1enh[0]))
+        c.serverS1 = s1enh
+        discard conn.send(s1enh)
+        # S2 = HMAC signature over C1 using full FP key
+        var s2sig = newSeq[byte](RTMP_HANDSHAKE_SIZE)
+        signS2(cast[ptr UncheckedArray[byte]](addr s2sig[0]), c1ptr)
+        discard conn.send(s2sig)
+      else:
+        # Plain handshake: echo C1 as S2
+        let s1 = buildServerS1()
+        c.serverS1 = s1
+        discard conn.send(s1)
+        var s2echo = newSeq[byte](RTMP_HANDSHAKE_SIZE)
+        copyMem(addr s2echo[0], c1ptr, RTMP_HANDSHAKE_SIZE)
+        discard conn.send(s2echo)
 
-      assert bufferevent_write(bev, outS0[0].addr, 1) == 0
-      assert bufferevent_write(bev, s1[0].addr, csize_t(s1.len)) == 0
-      assert bufferevent_write(bev, c1ptr, csize_t(RTMP_HANDSHAKE_SIZE)) == 0 # S2 = echo C1
-      assert evbuffer_drain(inbuf, 1 + csize_t(RTMP_HANDSHAKE_SIZE)) == 0
-
-      conn.hsState = HS_S0S1_SENT
+      c.hsState = HS_S0S1_SENT
       continue
 
-    if conn.hsState == HS_S0S1_SENT:
-      if avail < RTMP_HANDSHAKE_SIZE: return
-      let p2 = evbuffer_pullup(inbuf, RTMP_HANDSHAKE_SIZE)
-      if p2 == nil: return
-      let c2bytes = cast[ptr UncheckedArray[byte]](p2)
-      # Validate C2 equals our S1 (common check); warn but continue if mismatch
-      if conn.serverS1.len == RTMP_HANDSHAKE_SIZE:
+    if c.hsState == HS_S0S1_SENT:
+      if feedLen < RTMP_HANDSHAKE_SIZE:
+        if hasStaging and feedLen > 0:
+          gStaging[c.connId] = feedData
+        elif not hasStaging and feedLen > 0:
+          gStaging[c.connId] = @data
+        return
+
+      let c2bytes = cast[ptr UncheckedArray[byte]](feedPtr)
+      if c.serverS1.len == RTMP_HANDSHAKE_SIZE:
         var match = true
         for i in 0 ..< RTMP_HANDSHAKE_SIZE:
-          if conn.serverS1[i] != c2bytes[i]:
+          if c.serverS1[i] != c2bytes[i]:
             match = false
             break
-        # if not match: echo "Warning: C2 did not match server S1 (handshake mismatch)"
 
-      assert evbuffer_drain(inbuf, csize_t(RTMP_HANDSHAKE_SIZE)) == 0
-      conn.hsState = HS_DONE
-      # echo "RTMP handshake done"
+      c.hsState = HS_DONE
       continue
 
-    # HS_DONE: feed RTMP chunks (do NOT just drain)
-    let p = evbuffer_pullup(inbuf, avail)
-    if p == nil: return
-    let consumed = feedBytes(conn.chunkCtx, cast[ptr byte](p), avail)
+    # HS_DONE: feed RTMP chunks
+    let consumed = feedBytes(c.chunkCtx, feedPtr, feedLen)
     if consumed <= 0:
       return
-    discard evbuffer_drain(inbuf, csize_t(consumed))
-
-# Accept callback: accept socket, wrap into bufferevent and set callbacks (ConnCtx will be attached lazily)
-proc accept_cb(listenFd: cint, events: cshort, arg: pointer) {.cdecl.} =
-  let base = cast[ptr event_base](arg)
-  var clientAddr: SockAddr
-  var addrLen = Socklen(sizeof(clientAddr))
-  let clientFd = accept(SocketHandle(listenFd), addr(clientAddr), addrLen.addr)
-  if clientFd.int < 0:
-    return
-  # echo "accept: fd=", clientFd.int
-  setReuseAndNonblock(clientFd.cint)
-  let bev = bufferevent_socket_new(base, clientFd.cint, BEV_OPT_CLOSE_ON_FREE)
-  if bev == nil:
-    discard close(SocketHandle(clientFd))
+    if consumed < feedLen:
+      # Stage unconsumed tail
+      gStaging[c.connId] = newSeq[byte](feedLen - consumed)
+      copyMem(addr gStaging[c.connId][0],
+              cast[ptr UncheckedArray[byte]](cast[uint](feedPtr) + consumed.uint),
+              feedLen - consumed)
     return
 
-  # Extract IP address as string
-  var ipStr: array[32, char]
-  ipStr[0] = '\0'
-  let sa = cast[ptr Sockaddr_in](addr clientAddr)
-  discard inet_ntop(AF_INET, addr sa.sin_addr, addr ipStr[0], int32(ipStr.len))
-  # stash IP by bev pointer (cannot capture local in cdecl callback)
-  gPendingClientIp[cast[pointer](bev)] = $cstring(addr ipStr[0])
+proc onClientClose(conn: Connection) =
+  let c = cast[ConnCtx](conn.data)
+  if c == nil: return
+  cleanupConn(c)
+  c.closeReason = "EOF"
+  conn.data = nil
+  gStaging.del(c.connId)
 
-  bufferevent_setcb(bev, bev_read_cb, nil, bev_event_cb, nil)
-  discard bufferevent_enable(bev, EV_READ or EV_WRITE)
+proc onClientError(conn: Connection, err: string) =
+  let c = cast[ConnCtx](conn.data)
+  if c == nil: return
+  cleanupConn(c)
+  c.closeReason = "ERROR"
+  conn.data = nil
+  gStaging.del(c.connId)
 
 #
-# REST API listener handle
+# REST API handler (powpow HttpServer)
 #
-proc bindApiListener(server: RTMPServer, port: Port) =
-  # Bind a REST API listener on a separate port.
-  server.restApiHttp = evhttp_new(server.base)
-  if server.restApiHttp == nil:
-    raise newException(RTMPServerError, "Failed to create REST API http server")
+# Plain pointer global — gcsafe (no GC-managed memory).
+# Set during newRTMPServer; the ref RtmpMonitor is kept alive by gMonitor.
+var gMonitorPtr: pointer = nil
 
-  evhttp_set_gencb(server.restApiHttp, apiRequestCb, nil)
+proc apiRequestHandler*(req: HttpRequest, res: HttpResponse) {.gcsafe.} =
+  let monitor = cast[ref RtmpMonitor](gMonitorPtr)
+  let uri = req.getPath()
+  if uri != "/":
+    res.status(Http404).send("""{"ok":false,"error":"not_found"}""")
+    return
+  res.status(Http200)
+     .header("Content-Type", "application/json")
+     .header("Connection", "close")
+     .send($monitor.toJson())
 
-  let bound = evhttp_bind_socket_with_handle(server.restApiHttp, "0.0.0.0", uint16(port))
-  if bound == nil:
-    evhttp_free(server.restApiHttp)
-    server.restApiHttp = nil
-    raise newException(RTMPServerError, "Failed to bind REST API port " & $port)
-  server.restApiListener = evhttp_bound_socket_get_listener(bound)
-
+#
+# Accept callback (powpow onAccept)
+#
+proc onClientAccept(conn: Connection) =
+  ## powpow onAccept: called after accept, before read registration
+  var local = ConnCtx(
+    conn: conn,
+    state: RtmpConnState(
+      peerChunkSize: RTMP_DEFAULT_CHUNK_SIZE,
+      localChunkSize: RTMP_DEFAULT_CHUNK_SIZE,
+      streams: initTable[int, pointer]()
+    ),
+    hsState: HS_INIT,
+    nextStreamId: 1,
+    connId: gNextConnId,
+    clientIp: conn.clientIp,
+  )
+  gNextConnId.inc
+  conn.data = cast[pointer](local)
+  local.chunkCtx = initChunkStreamCtx(local.state.peerChunkSize)
+  setOnMessage(local.chunkCtx, onChunkMessage, cast[pointer](local))
 
 #
 # Public API
 #
 proc newRTMPServer*(settings: RtmpServerSettings = RtmpServerSettings()): RTMPServer =
-  ## Creates a new RTMP server instance with the specified settings. This initializes the
-  ## event base and binds the REST API listener if enabled.
+  ## Creates a new RTMP server instance with the specified settings.
   new(result)
-  result.base = event_base_new()
+  result.loop = newLoop()
   result.settings = settings
-  if result.base == nil:
-    raise newException(RTMPServerError,
-          "Failed to create event base")
-  # Bind REST API listener on separate port (default 4000)
-  result.bindApiListener(settings.restApiPort)
+  # Bind REST API listener if enabled
+  if settings.enableRestApi:
+    gMonitorPtr = cast[pointer](gMonitor)
+    result.httpServer = newHttpServer(result.loop, populate = false)
+    result.httpServer.handler = apiRequestHandler
+    result.httpServer.listen("0.0.0.0", settings.restApiPort.int)
 
 proc startServer*(server: RTMPServer) =
   ## Start RTMP server on specified port (default 1935)
-  ## 
-  ## This is a blocking call that runs the event loop; it will not return
-  ## until the server is stopped.
-  var listenFd = socket(AF_INET, SOCK_STREAM, 0)
-  if listenFd.int < 0:
-    raise newException(RTMPServerError, "Failed to create socket")
-  setReuseAndNonblock(listenFd.cint)
-
-  # Bind to all interfaces on the specified port
-  var sockAddr: Sockaddr_in
-  sockAddr.sin_family = AF_INET.uint8
-  sockAddr.sin_port = htons(server.settings.rtmpPort.uint16)
-  sockAddr.sin_addr.s_addr = inet_addr("0.0.0.0")
-
-  if bindSocket(listenFd, cast[ptr SockAddr](addr sockAddr), SockLen(sizeof(sockAddr))) < 0:
-    raise newException(RTMPServerError, "Failed to bind socket")
-  
-  if listen(listenFd, 128) < 0:
-    raise newException(RTMPServerError, "Failed to listen on socket")  
-  let ev = event_new(server.base, listenFd.cint, EV_READ or EV_PERSIST, accept_cb, server.base)
-  if ev == nil:
-    raise newException(RTMPServerError, "Failed to create event")
-  discard event_add(ev, nil)
-  discard event_base_dispatch(server.base)
+  ## This is a blocking call that runs the event loop.
+  let srv = newTcpServer(server.loop,
+    onData = onClientData,
+    onAccept = onClientAccept,
+    onClose = onClientClose)
+  srv.listen("0.0.0.0", server.settings.rtmpPort.int)
+  server.loop.run()

@@ -56,5 +56,5 @@ rtmpClient.onStreamError =
     echo "[rtmp] Stream error: ", err
 
 echo "[rtmp] Starting event loop"
-discard event_base_dispatch(rtmpClient.base)
+rtmpClient.loop.run()
 

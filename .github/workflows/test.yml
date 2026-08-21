@@ -21,6 +21,10 @@ jobs:
           - 'stable'
     steps:
       - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+        with:
+          repository: openpeeps/powpow
+          path: ../powpow
       - uses: jiro4989/setup-nim-action@v1
         with:
           nim-version: ${{ matrix.nim-version }}
@@ -30,25 +34,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            pkg-config libssl-dev libevent-dev ca-certificates
+            pkg-config libssl-dev ca-certificates
           sudo ldconfig
-
-      # not needed
-      # - name: Build SRS (shallow single-branch clone)
-      #   run: |
-      #     git clone --depth 1 --branch develop --single-branch https://github.com/ossrs/srs.git
-      #     cd srs/trunk
-      #     ./configure
-      #     make -j$(nproc)
-      #     if [ -f /usr/local/lib/libssl.so ] || [ -f /usr/local/lib/libsrs.a ]; then
-      #       sudo ldconfig
-      #     fi
-
-      - name: Debug - verify libs visible
-        run: |
-          pkg-config --cflags --libs openssl libevent || true
-          ldconfig -p | grep -E "libssl|libcrypto|libevent" || true
-          ls -l /usr/lib/*/libssl* /usr/local/lib/libssl* || true
 
       - run: nimble install -Y
       - run: nim c src/${{ github.event.repository.name }}.nim

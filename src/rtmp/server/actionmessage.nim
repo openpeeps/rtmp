@@ -9,7 +9,7 @@ import std/[tables, sequtils, strutils,
 
 type
   AMF0Type* = enum
-    ## AMF0 data types as defined in the RTMP specification. Used for encoding/decoding action message payloads.
+    ## AMF0 data types as defined in the RTMP specification.
     AMF0_Number = 0
     AMF0_Boolean = 1
     AMF0_String = 2
@@ -19,6 +19,19 @@ type
     AMF0_ECMAArray = 8
     AMF0_StrictArray = 10
     AMF0_LongString = 12
+
+  AMF3Type* = enum
+    ## AMF3 data types (marker values 0x00-0x1F).
+    AMF3_Undefined = 0x00
+    AMF3_Null = 0x01
+    AMF3_False = 0x02
+    AMF3_True = 0x03
+    AMF3_Integer = 0x04
+    AMF3_Double = 0x05
+    AMF3_String = 0x06
+    AMF3_Object = 0x08
+    AMF3_Array = 0x09
+    AMF3_ByteArray = 0x0C
 
   AMF0Value* = ref object
     ## Represents a value encoded in AMF0 format, used for RTMP action messages.
@@ -104,6 +117,36 @@ proc seqSliceToStr(data: seq[byte], start, len: int): string =
   result = newString(len)
   for i in 0 ..< len:
     result[i] = char(data[start + i])
+
+#
+# AMF3 helpers
+#
+proc readU29(data: seq[byte], idx: var int): int =
+  ## Read AMF3 variable-length U29 integer (1-4 bytes, 29 bits max).
+  var result = int(data[idx] and 0x7F)
+  idx.inc
+  if (data[idx-1] and 0x80) != 0:
+    result = (result shl 7) or int(data[idx] and 0x7F)
+    idx.inc
+    if (data[idx-1] and 0x80) != 0:
+      result = (result shl 7) or int(data[idx] and 0x7F)
+      idx.inc
+      if (data[idx-1] and 0x80) != 0:
+        result = (result shl 8) or int(data[idx])
+        idx.inc
+  result
+
+proc readAmf3String(data: seq[byte], idx: var int): string =
+  ## Read AMF3 string (length is U29-prefixed).
+  let head = readU29(data, idx)
+  if (head and 1) == 0:
+    return ""
+  let slen = head shr 1
+  if slen > 0 and idx + slen <= data.len:
+    result = seqSliceToStr(data, idx, slen)
+    idx += slen
+  else:
+    result = ""
 
 proc writeUint16BE(`out`: var seq[byte], v: uint16) =
   `out`.add(byte((v shr 8) and 0xFF))
@@ -215,6 +258,83 @@ proc decodeAllAMF0*(data: seq[byte]): seq[AMF0Value] =
 # Rename to avoid duplicate exported signature later (ptr-based wrapper keeps name decodeAllAMF0*)
 proc decodeAllAMF0Seq*(data: seq[byte]): seq[AMF0Value] =
   decodeAllAMF0(data)
+
+#
+# AMF3 decoder
+#
+proc decodeOneAMF3*(data: seq[byte], idx: var int): AMF0Value =
+  ## Decode a single AMF3 value. Returns AMF0Value for interop.
+  if idx >= data.len: return nil
+  let marker = int(data[idx])
+  idx.inc
+  case marker
+  of 0x00: # AMF3 Undefined
+    result = newUndefined()
+  of 0x01: # AMF3 Null
+    result = newNull()
+  of 0x02: # AMF3 False
+    result = newBoolean(false)
+  of 0x03: # AMF3 True
+    result = newBoolean(true)
+  of 0x04: # AMF3 Integer (U29, 1-4 bytes)
+    let v = readU29(data, idx)
+    result = newNumber(float64(v))
+  of 0x05: # AMF3 Double (8 bytes IEEE-754)
+    let v = readFloat64BE(data, idx)
+    result = newNumber(v)
+  of 0x06: # AMF3 String (U29-length-prefixed)
+    let s = readAmf3String(data, idx)
+    result = newString(s)
+  of 0x08: # AMF3 Object
+    var t = initTable[string, AMF0Value]()
+    # Read trait head (U29): inline + sealed + dynamic flags
+    discard readU29(data, idx)
+    # Read class name (always empty for anonymous objects)
+    discard readAmf3String(data, idx)
+    # Read dynamic members until empty-string terminator
+    while idx < data.len:
+      let name = readAmf3String(data, idx)
+      if name.len == 0: break
+      let v = decodeOneAMF3(data, idx)
+      if v == nil: break
+      t[name] = v
+    result = newObject()
+    result.obj = t
+  of 0x09: # AMF3 Array (dense + associative)
+    let denseCount = readU29(data, idx) shr 1
+    var t = initTable[string, AMF0Value]()
+    # Read associative members (same as object dynamic members)
+    while idx < data.len:
+      let name = readAmf3String(data, idx)
+      if name.len == 0: break
+      let v = decodeOneAMF3(data, idx)
+      if v == nil: break
+      t[name] = v
+    # Read dense members
+    for i in 0 ..< denseCount:
+      let v = decodeOneAMF3(data, idx)
+      if v == nil: break
+      t[$i] = v
+    result = newObject()
+    result.obj = t
+  of 0x0C: # AMF3 Byte Array (skip content)
+    let head = readU29(data, idx)
+    if (head and 1) != 0:
+      let blen = head shr 1
+      idx += blen
+    result = newUndefined()
+  else:
+    # Unknown AMF3 type — skip and return undefined
+    result = newUndefined()
+
+proc decodeAllAMF3*(data: seq[byte]): seq[AMF0Value] =
+  ## Decode all AMF3 values from a byte sequence.
+  result = @[]
+  var idx = 0
+  while idx < data.len:
+    let v = decodeOneAMF3(data, idx)
+    if v == nil: break
+    result.add(v)
 
 #
 # pointer-based helpers (zero-copy input parsing)
