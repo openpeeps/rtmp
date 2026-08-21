@@ -1,4 +1,4 @@
-import pkg/rtmp
+import ../src/rtmp
 
 # This is a simple example of how to create an RTMP server
 # using the `rtmp` package.

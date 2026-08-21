@@ -1,4 +1,4 @@
-import pkg/rtmp
+import ../src/rtmp
 
 # This is a simple example of how to create an RTMP streaming client
 # using the `rtmp` package.
@@ -55,6 +55,11 @@ rtmpClient.onStreamError =
   proc(c: RtmpClient, st: StreamState, err: cstring) =
     echo "[rtmp] Stream error: ", err
 
+rtmpClient.onError =
+  proc(c: RtmpClient, msg: string) =
+    echo "[rtmp] ERROR: ", msg
+    c.loop.stop()
+
 echo "[rtmp] Starting event loop"
-discard event_base_dispatch(rtmpClient.base)
+rtmpClient.loop.run()
 
