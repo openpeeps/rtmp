@@ -57,6 +57,34 @@
 <li><a class="reference external"
           data-doc-search-tag="actionmessage: AMF0Type.AMF0_Object" href="rtmp/server/actionmessage.html#AMF0_Object">actionmessage: AMF0Type.AMF0_Object</a></li>
           </ul></dd>
+<dt><a name="amf0PutBool" href="#amf0PutBool"><span>amf0PutBool:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: proc amf0PutBool(b: bool; outp: var seq[byte])" href="rtmp/rtmpclient.html#amf0PutBool%2Cbool%2Cseq%5Bbyte%5D">rtmpclient: proc amf0PutBool(b: bool; outp: var seq[byte])</a></li>
+          </ul></dd>
+<dt><a name="amf0PutDouble" href="#amf0PutDouble"><span>amf0PutDouble:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: proc amf0PutDouble(v: float64; outp: var seq[byte])" href="rtmp/rtmpclient.html#amf0PutDouble%2Cfloat64%2Cseq%5Bbyte%5D">rtmpclient: proc amf0PutDouble(v: float64; outp: var seq[byte])</a></li>
+          </ul></dd>
+<dt><a name="amf0PutNull" href="#amf0PutNull"><span>amf0PutNull:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: proc amf0PutNull(outp: var seq[byte])" href="rtmp/rtmpclient.html#amf0PutNull%2Cseq%5Bbyte%5D">rtmpclient: proc amf0PutNull(outp: var seq[byte])</a></li>
+          </ul></dd>
+<dt><a name="amf0PutNumber" href="#amf0PutNumber"><span>amf0PutNumber:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: proc amf0PutNumber(txid: int; outp: var seq[byte])" href="rtmp/rtmpclient.html#amf0PutNumber%2Cint%2Cseq%5Bbyte%5D">rtmpclient: proc amf0PutNumber(txid: int; outp: var seq[byte])</a></li>
+          </ul></dd>
+<dt><a name="amf0PutString" href="#amf0PutString"><span>amf0PutString:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: proc amf0PutString(s: string; outp: var seq[byte])" href="rtmp/rtmpclient.html#amf0PutString%2Cstring%2Cseq%5Bbyte%5D">rtmpclient: proc amf0PutString(s: string; outp: var seq[byte])</a></li>
+          </ul></dd>
+<dt><a name="amf0ReadNumberAsInt" href="#amf0ReadNumberAsInt"><span>amf0ReadNumberAsInt:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: proc amf0ReadNumberAsInt(b: openArray[byte]; i: var int): int" href="rtmp/rtmpclient.html#amf0ReadNumberAsInt%2CopenArray%5Bbyte%5D%2Cint">rtmpclient: proc amf0ReadNumberAsInt(b: openArray[byte]; i: var int): int</a></li>
+          </ul></dd>
+<dt><a name="amf0ReadString" href="#amf0ReadString"><span>amf0ReadString:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: proc amf0ReadString(b: openArray[byte]; i: var int): string" href="rtmp/rtmpclient.html#amf0ReadString%2CopenArray%5Bbyte%5D%2Cint">rtmpclient: proc amf0ReadString(b: openArray[byte]; i: var int): string</a></li>
+          </ul></dd>
 <dt><a name="AMF0_StrictArray" href="#AMF0_StrictArray"><span>AMF0_StrictArray:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="actionmessage: AMF0Type.AMF0_StrictArray" href="rtmp/server/actionmessage.html#AMF0_StrictArray">actionmessage: AMF0Type.AMF0_StrictArray</a></li>
@@ -132,6 +160,10 @@
 <dt><a name="apiRequestHandler" href="#apiRequestHandler"><span>apiRequestHandler:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpserver: proc apiRequestHandler(req: HttpRequest; res: HttpResponse)" href="rtmp/rtmpserver.html#apiRequestHandler%2CHttpRequest%2CHttpResponse">rtmpserver: proc apiRequestHandler(req: HttpRequest; res: HttpResponse)</a></li>
+          </ul></dd>
+<dt><a name="buildAacAsc" href="#buildAacAsc"><span>buildAacAsc:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: proc buildAacAsc(profile, sfIndex, channels: int): seq[byte]" href="rtmp/rtmpclient.html#buildAacAsc%2Cint%2Cint%2Cint">rtmpclient: proc buildAacAsc(profile, sfIndex, channels: int): seq[byte]</a></li>
           </ul></dd>
 <dt><a name="ChunkHeader" href="#ChunkHeader"><span>ChunkHeader:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -216,6 +248,14 @@
 <dt><a name="feedBytes" href="#feedBytes"><span>feedBytes:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="chunkstream: proc feedBytes(ctx: ChunkStreamCtx; data: ptr byte; len: int): int" href="rtmp/server/chunkstream.html#feedBytes%2CChunkStreamCtx%2Cptr.byte%2Cint">chunkstream: proc feedBytes(ctx: ChunkStreamCtx; data: ptr byte; len: int): int</a></li>
+          </ul></dd>
+<dt><a name="FlvTagHeader" href="#FlvTagHeader"><span>FlvTagHeader:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: object FlvTagHeader" href="rtmp/rtmpclient.html#FlvTagHeader">rtmpclient: object FlvTagHeader</a></li>
+          </ul></dd>
+<dt><a name="flvTagToRtmp" href="#flvTagToRtmp"><span>flvTagToRtmp:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: proc flvTagToRtmp(tagType: uint8): (uint8, uint8)" href="rtmp/rtmpclient.html#flvTagToRtmp%2Cuint8">rtmpclient: proc flvTagToRtmp(tagType: uint8): (uint8, uint8)</a></li>
           </ul></dd>
 <dt><a name="freemem" href="#freemem"><span>freemem:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -359,9 +399,35 @@
 <li><a class="reference external"
           data-doc-search-tag="rtmpplaylist: proc nextVideo(ps: PlaylistState): string" href="rtmp/rtmpplaylist.html#nextVideo%2CPlaylistState">rtmpplaylist: proc nextVideo(ps: PlaylistState): string</a></li>
           </ul></dd>
+<dt><a name="parseAdts" href="#parseAdts"><span>parseAdts:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: proc parseAdts(fd: cint; pos: int64; frameLen: var int; headerLen: var int;
+          profile: var int; sfIndex: var int; channels: var int): bool" href="rtmp/rtmpclient.html#parseAdts%2Ccint%2Cint64%2Cint%2Cint%2Cint%2Cint%2Cint">rtmpclient: proc parseAdts(fd: cint; pos: int64; frameLen: var int; headerLen: var int;
+          profile: var int; sfIndex: var int; channels: var int): bool</a></li>
+          </ul></dd>
+<dt><a name="parseBasicHeader" href="#parseBasicHeader"><span>parseBasicHeader:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: proc parseBasicHeader(data: openArray[byte]; start: int): (uint8, uint32, int, bool)" href="rtmp/rtmpclient.html#parseBasicHeader%2CopenArray%5Bbyte%5D%2Cint">rtmpclient: proc parseBasicHeader(data: openArray[byte]; start: int): (uint8, uint32, int, bool)</a></li>
+          </ul></dd>
+<dt><a name="parseRtmpUrl" href="#parseRtmpUrl"><span>parseRtmpUrl:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: proc parseRtmpUrl(address: string): RtmpUrl" href="rtmp/rtmpclient.html#parseRtmpUrl%2Cstring">rtmpclient: proc parseRtmpUrl(address: string): RtmpUrl</a></li>
+          </ul></dd>
+<dt><a name="peekNextFlvTagTs" href="#peekNextFlvTagTs"><span>peekNextFlvTagTs:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: proc peekNextFlvTagTs(fd: cint; pos: int64; nextTs: var uint32): bool" href="rtmp/rtmpclient.html#peekNextFlvTagTs%2Ccint%2Cint64%2Cuint32">rtmpclient: proc peekNextFlvTagTs(fd: cint; pos: int64; nextTs: var uint32): bool</a></li>
+          </ul></dd>
 <dt><a name="PlaylistState" href="#PlaylistState"><span>PlaylistState:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpplaylist: type PlaylistState" href="rtmp/rtmpplaylist.html#PlaylistState">rtmpplaylist: type PlaylistState</a></li>
+          </ul></dd>
+<dt><a name="readFlvHeader" href="#readFlvHeader"><span>readFlvHeader:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: proc readFlvHeader(fd: cint): int64" href="rtmp/rtmpclient.html#readFlvHeader%2Ccint">rtmpclient: proc readFlvHeader(fd: cint): int64</a></li>
+          </ul></dd>
+<dt><a name="readFlvTagHeader" href="#readFlvTagHeader"><span>readFlvTagHeader:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: proc readFlvTagHeader(fd: cint; pos: int64; th: var FlvTagHeader): bool" href="rtmp/rtmpclient.html#readFlvTagHeader%2Ccint%2Cint64%2CFlvTagHeader">rtmpclient: proc readFlvTagHeader(fd: cint; pos: int64; th: var FlvTagHeader): bool</a></li>
           </ul></dd>
 <dt><a name="releaseUnusedMemory" href="#releaseUnusedMemory"><span>releaseUnusedMemory:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -422,6 +488,14 @@
 <dt><a name="RtmpSubscriber" href="#RtmpSubscriber"><span>RtmpSubscriber:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="rtmpmonitor: object RtmpSubscriber" href="rtmp/server/rtmpmonitor.html#RtmpSubscriber">rtmpmonitor: object RtmpSubscriber</a></li>
+          </ul></dd>
+<dt><a name="RtmpUrl" href="#RtmpUrl"><span>RtmpUrl:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: object RtmpUrl" href="rtmp/rtmpclient.html#RtmpUrl">rtmpclient: object RtmpUrl</a></li>
+          </ul></dd>
+<dt><a name="samplingRateFromIndex" href="#samplingRateFromIndex"><span>samplingRateFromIndex:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: proc samplingRateFromIndex(idx: int): int" href="rtmp/rtmpclient.html#samplingRateFromIndex%2Cint">rtmpclient: proc samplingRateFromIndex(idx: int): int</a></li>
           </ul></dd>
 <dt><a name="setOnMessage" href="#setOnMessage"><span>setOnMessage:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -519,6 +593,10 @@
 <li><a class="reference external"
           data-doc-search-tag="rtmpserver: object SubscriberEntry" href="rtmp/rtmpserver.html#SubscriberEntry">rtmpserver: object SubscriberEntry</a></li>
           </ul></dd>
+<dt><a name="u32be" href="#u32be"><span>u32be:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="rtmpclient: proc u32be(b: openArray[byte]; i: int): uint32" href="rtmp/rtmpclient.html#u32be%2CopenArray%5Bbyte%5D%2Cint">rtmpclient: proc u32be(b: openArray[byte]; i: int): uint32</a></li>
+          </ul></dd>
 <dt><a name="validateC1Digest" href="#validateC1Digest"><span>validateC1Digest:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="handshake: proc validateC1Digest(c1: ptr UncheckedArray[byte]): bool" href="rtmp/server/handshake.html#validateC1Digest%2Cptr.UncheckedArray%5Bbyte%5D">handshake: proc validateC1Digest(c1: ptr UncheckedArray[byte]): bool</a></li>
@@ -539,7 +617,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-09-09 17:12:43 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-09-09 17:47:44 UTC</small>
       </div>
     </div>
   </div>

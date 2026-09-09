@@ -20,7 +20,26 @@ nim	StreamState	rtmp/rtmpclient.html#StreamState	type StreamState		39
 nim	AacStreamState	rtmp/rtmpclient.html#AacStreamState	type AacStreamState		56
 nim	ChunkStreamState	rtmp/rtmpclient.html#ChunkStreamState	object ChunkStreamState		78
 nim	RtmpClient	rtmp/rtmpclient.html#RtmpClient	type RtmpClient		83
+nim	amf0PutString	rtmp/rtmpclient.html#amf0PutString,string,seq[byte]	proc amf0PutString(s: string; outp: var seq[byte])		133
+nim	amf0PutNumber	rtmp/rtmpclient.html#amf0PutNumber,int,seq[byte]	proc amf0PutNumber(txid: int; outp: var seq[byte])		139
+nim	amf0PutNull	rtmp/rtmpclient.html#amf0PutNull,seq[byte]	proc amf0PutNull(outp: var seq[byte])		147
+nim	amf0PutBool	rtmp/rtmpclient.html#amf0PutBool,bool,seq[byte]	proc amf0PutBool(b: bool; outp: var seq[byte])		150
+nim	amf0PutDouble	rtmp/rtmpclient.html#amf0PutDouble,float64,seq[byte]	proc amf0PutDouble(v: float64; outp: var seq[byte])		154
+nim	amf0ReadString	rtmp/rtmpclient.html#amf0ReadString,openArray[byte],int	proc amf0ReadString(b: openArray[byte]; i: var int): string		161
+nim	amf0ReadNumberAsInt	rtmp/rtmpclient.html#amf0ReadNumberAsInt,openArray[byte],int	proc amf0ReadNumberAsInt(b: openArray[byte]; i: var int): int		170
+nim	u32be	rtmp/rtmpclient.html#u32be,openArray[byte],int	proc u32be(b: openArray[byte]; i: int): uint32		266
+nim	parseBasicHeader	rtmp/rtmpclient.html#parseBasicHeader,openArray[byte],int	proc parseBasicHeader(data: openArray[byte]; start: int): (uint8, uint32, int, bool)		319
+nim	samplingRateFromIndex	rtmp/rtmpclient.html#samplingRateFromIndex,int	proc samplingRateFromIndex(idx: int): int		591
+nim	parseAdts	rtmp/rtmpclient.html#parseAdts,cint,int64,int,int,int,int,int	proc parseAdts(fd: cint; pos: int64; frameLen: var int; headerLen: var int;\n          profile: var int; sfIndex: var int; channels: var int): bool		595
+nim	buildAacAsc	rtmp/rtmpclient.html#buildAacAsc,int,int,int	proc buildAacAsc(profile, sfIndex, channels: int): seq[byte]		614
 nim	startStreamAacAdtsZeroCopy	rtmp/rtmpclient.html#startStreamAacAdtsZeroCopy,RtmpClient,string,uint32,uint8,int,uint32	proc startStreamAacAdtsZeroCopy(client: RtmpClient; filePath: string;\n                           msgStreamId: uint32; csid: uint8 = 4'u8;\n                           lowWater: int = 256 * 1024; startTs: uint32 = 0'u32)		718
+nim	FlvTagHeader	rtmp/rtmpclient.html#FlvTagHeader	object FlvTagHeader		748
+nim	readFlvHeader	rtmp/rtmpclient.html#readFlvHeader,cint	proc readFlvHeader(fd: cint): int64		754
+nim	readFlvTagHeader	rtmp/rtmpclient.html#readFlvTagHeader,cint,int64,FlvTagHeader	proc readFlvTagHeader(fd: cint; pos: int64; th: var FlvTagHeader): bool		763
+nim	flvTagToRtmp	rtmp/rtmpclient.html#flvTagToRtmp,uint8	proc flvTagToRtmp(tagType: uint8): (uint8, uint8)		776
+nim	peekNextFlvTagTs	rtmp/rtmpclient.html#peekNextFlvTagTs,cint,int64,uint32	proc peekNextFlvTagTs(fd: cint; pos: int64; nextTs: var uint32): bool		783
 nim	startStreamFlvZeroCopy	rtmp/rtmpclient.html#startStreamFlvZeroCopy,RtmpClient,string,uint32,int,uint32	proc startStreamFlvZeroCopy(client: RtmpClient; filePath: string;\n                       msgStreamId: uint32; lowWater: int = 256 * 1024;\n                       startTs: uint32 = 0'u32)		861
-nim	newRtmpClient	rtmp/rtmpclient.html#newRtmpClient,string	proc newRtmpClient(address: string): RtmpClient		892
-nim	startPacer	rtmp/rtmpclient.html#startPacer,RtmpClient,proc(RtmpClient)	proc startPacer(client: RtmpClient; initCb: proc (c: RtmpClient) = nil)		1091
+nim	RtmpUrl	rtmp/rtmpclient.html#RtmpUrl	object RtmpUrl		893
+nim	parseRtmpUrl	rtmp/rtmpclient.html#parseRtmpUrl,string	proc parseRtmpUrl(address: string): RtmpUrl		904
+nim	newRtmpClient	rtmp/rtmpclient.html#newRtmpClient,string	proc newRtmpClient(address: string): RtmpClient		921
+nim	startPacer	rtmp/rtmpclient.html#startPacer,RtmpClient,proc(RtmpClient)	proc startPacer(client: RtmpClient; initCb: proc (c: RtmpClient) = nil)		1111
