@@ -18,6 +18,6 @@ nim	monitorAddSubscriber	rtmp/rtmpserver.html#monitorAddSubscriber,string,ConnCt
 nim	monitorRemoveSubscriber	rtmp/rtmpserver.html#monitorRemoveSubscriber,string,ConnCtx	proc monitorRemoveSubscriber(streamName: string; subConn: ConnCtx)		131
 nim	SubscriberEntry	rtmp/rtmpserver.html#SubscriberEntry	object SubscriberEntry		144
 nim	StreamEntry	rtmp/rtmpserver.html#StreamEntry	type StreamEntry		148
-nim	apiRequestHandler	rtmp/rtmpserver.html#apiRequestHandler,HttpRequest,HttpResponse	proc apiRequestHandler(req: HttpRequest; res: HttpResponse)		890
-nim	newRTMPServer	rtmp/rtmpserver.html#newRTMPServer,RtmpServerSettings	proc newRTMPServer(settings: RtmpServerSettings = RtmpServerSettings()): RtmpServer		926
-nim	startServer	rtmp/rtmpserver.html#startServer,RtmpServer	proc startServer(server: RtmpServer)		938
+nim	apiRequestHandler	rtmp/rtmpserver.html#apiRequestHandler,HttpRequest,HttpResponse	proc apiRequestHandler(req: HttpRequest; res: HttpResponse)		893
+nim	newRTMPServer	rtmp/rtmpserver.html#newRTMPServer,RtmpServerSettings	proc newRTMPServer(settings: RtmpServerSettings = RtmpServerSettings()): RtmpServer		936
+nim	startServer	rtmp/rtmpserver.html#startServer,RtmpServer	proc startServer(server: RtmpServer)		947

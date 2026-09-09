@@ -16,10 +16,10 @@
 <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAA3XAAAN1wFCKJt4AAAAB3RJTUUH4QQQEwksSS9ZWwAAAk1JREFUWMPtll2ITVEUx39nn/O7Y5qR8f05wtCUUr6ZIS++8pEnkZInPImneaCQ5METNdOkeFBKUhMPRIkHKfEuUZSUlGlKPN2TrgfncpvmnntnmlEyq1Z7t89/rf9a6+y99oZxGZf/XeIq61EdtgKXgdXA0xrYAvBjOIF1AI9zvjcC74BSpndrJPkBWDScTF8Aa4E3wDlgHbASaANmVqlcCnwHvgDvgVfAJ+AikAAvgfVZwLnSVZHZaOuKoQi3ZOMi4NkYkpe1p4J7A8BpYAD49hfIy/oqG0+hLomiKP2L5L+1ubn5115S+3OAn4EnwBlgMzCjyt6ZAnQCJ4A7wOs88iRJHvw50HoujuPBoCKwHWiosy8MdfZnAdcHk8dxXFJ3VQbQlCTJvRBCGdRbD4M6uc5glpY3eAihpN5S5w12diSEcCCEcKUO4ljdr15T76ur1FDDLIQQ3qv71EdDOe3Kxj3leRXyk+pxdWnFWod6Wt2bY3de3aSuUHcPBVimHs7mK9WrmeOF6lR1o9qnzskh2ar2qm1qizpfXaPeVGdlmGN5pb09qMxz1Xb1kLqgzn1RyH7JUXW52lr5e/Kqi9qpto7V1atuUzfnARrV7jEib1T76gG2qxdGmXyiekkt1GswPTtek0aBfJp6YySGBfWg2tPQ0FAYgf1stUfdmdcjarbYJEniKIq6gY/Aw+zWHAC+p2labGpqiorFYgGYCEzN7oQdQClN07O1/EfDyGgC0ALMBdYAi4FyK+4H3gLPsxfR1zRNi+NP7nH5J+QntnXe5B5mpfQAAAAASUVORK5CYII=">
 
 <!-- CSS -->
-<link rel="stylesheet" type="text/css" href="../../nimdoc.out.css?v=2.2.10">
+<link rel="stylesheet" type="text/css" href="../../nimdoc.out.css?v=2.2.12">
 
 <!-- JS -->
-<script type="text/javascript" src="../../dochack.js?v=2.2.10"></script>
+<script type="text/javascript" src="../../dochack.js?v=2.2.12"></script>
 </head>
 <body>
   <div class="document" id="documentId">
@@ -59,7 +59,6 @@
     <summary><a class="reference reference-toplevel" href="#7" id="57">Types</a></summary>
     <ul class="simple simple-toc-section">
       <li><a class="reference" href="#EvpMd" title="EvpMd = pointer">EvpMd</a></li>
-<li><a class="reference" href="#EvpMdCtx" title="EvpMdCtx = pointer">EvpMdCtx</a></li>
 <li><a class="reference" href="#HMACCtx" title="HMACCtx = pointer">HMACCtx</a></li>
 
     </ul>
@@ -77,26 +76,6 @@
   <li><a class="reference" href="#HMAC%2CEvpMd%2Cpointer%2Ccint%2Cpointer%2Ccsize_t%2Cpointer%2Cptr.cuint" title="HMAC(md: EvpMd; key: pointer; keyLen: cint; data: pointer; dataLen: csize_t;
      output: pointer; outputLen: ptr cuint): pointer">HMAC(md: EvpMd; key: pointer; keyLen: cint; data: pointer; dataLen: csize_t;
      output: pointer; outputLen: ptr cuint): pointer</a></li>
-
-</ul>
-<ul class="simple nested-toc-section">HMAC_CTX_free
-  <li><a class="reference" href="#HMAC_CTX_free%2CHMACCtx" title="HMAC_CTX_free(ctx: HMACCtx)">HMAC_CTX_free(ctx: HMACCtx)</a></li>
-
-</ul>
-<ul class="simple nested-toc-section">HMAC_CTX_new
-  <li><a class="reference" href="#HMAC_CTX_new" title="HMAC_CTX_new(): HMACCtx">HMAC_CTX_new(): HMACCtx</a></li>
-
-</ul>
-<ul class="simple nested-toc-section">HMAC_Final
-  <li><a class="reference" href="#HMAC_Final%2CHMACCtx%2Cpointer%2Cptr.cuint" title="HMAC_Final(ctx: HMACCtx; output: pointer; outputLen: ptr cuint): cint">HMAC_Final(ctx: HMACCtx; output: pointer; outputLen: ptr cuint): cint</a></li>
-
-</ul>
-<ul class="simple nested-toc-section">HMAC_Init_ex
-  <li><a class="reference" href="#HMAC_Init_ex%2CHMACCtx%2Cpointer%2Ccint%2CEvpMd%2Cpointer" title="HMAC_Init_ex(ctx: HMACCtx; key: pointer; keyLen: cint; md: EvpMd; impl: pointer): cint">HMAC_Init_ex(ctx: HMACCtx; key: pointer; keyLen: cint; md: EvpMd; impl: pointer): cint</a></li>
-
-</ul>
-<ul class="simple nested-toc-section">HMAC_Update
-  <li><a class="reference" href="#HMAC_Update%2CHMACCtx%2Cpointer%2Ccsize_t" title="HMAC_Update(ctx: HMACCtx; data: pointer; dataLen: csize_t): cint">HMAC_Update(ctx: HMACCtx; data: pointer; dataLen: csize_t): cint</a></li>
 
 </ul>
 
@@ -123,14 +102,6 @@
     
   </dd>
 </div>
-<div id="EvpMdCtx">
-  <dt><pre><a href="#EvpMdCtx"><span class="Identifier">EvpMdCtx</span></a> <span class="Other">=</span> <span class="Identifier">pointer</span></pre></dt>
-  <dd>
-    
-    
-    
-  </dd>
-</div>
 <div id="HMACCtx">
   <dt><pre><a href="#HMACCtx"><span class="Identifier">HMACCtx</span></a> <span class="Other">=</span> <span class="Identifier">pointer</span></pre></dt>
   <dd>
@@ -147,8 +118,8 @@
   <dl class="item">
     <div id="EVP_sha256-procs-all">
   <div id="EVP_sha256">
-  <dt><pre><span class="Keyword">proc</span> <a href="#EVP_sha256"><span class="Identifier">EVP_sha256</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="#EvpMd"><span class="Identifier">EvpMd</span></a> {.<span class="Identifier">importc</span><span class="Other">:</span> <span class="StringLit">&quot;EVP_sha256&quot;</span><span class="Other">,</span> <span class="Identifier">dynlib</span><span class="Other">:</span> <span class="StringLit">&quot;libssl.so|libssl.dylib|libssl.so.3|libssl.so.1.1&quot;</span><span class="Other">,</span>
-                           <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#EVP_sha256"><span class="Identifier">EVP_sha256</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="#EvpMd"><span class="Identifier">EvpMd</span></a> {.<span class="Identifier">importc</span><span class="Other">:</span> <span class="StringLit">&quot;EVP_sha256&quot;</span><span class="Other">,</span> <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+                           <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     
@@ -161,75 +132,7 @@
   <div id="HMAC,EvpMd,pointer,cint,pointer,csize_t,pointer,ptr.cuint">
   <dt><pre><span class="Keyword">proc</span> <a href="#HMAC%2CEvpMd%2Cpointer%2Ccint%2Cpointer%2Ccsize_t%2Cpointer%2Cptr.cuint"><span class="Identifier">HMAC</span></a><span class="Other">(</span><span class="Identifier">md</span><span class="Other">:</span> <a href="#EvpMd"><span class="Identifier">EvpMd</span></a><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">pointer</span><span class="Other">;</span> <span class="Identifier">keyLen</span><span class="Other">:</span> <span class="Identifier">cint</span><span class="Other">;</span> <span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">pointer</span><span class="Other">;</span>
           <span class="Identifier">dataLen</span><span class="Other">:</span> <span class="Identifier">csize_t</span><span class="Other">;</span> <span class="Identifier">output</span><span class="Other">:</span> <span class="Identifier">pointer</span><span class="Other">;</span> <span class="Identifier">outputLen</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">cuint</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">pointer</span> {.
-    <span class="Identifier">importc</span><span class="Other">:</span> <span class="StringLit">&quot;HMAC&quot;</span><span class="Other">,</span>
-    <span class="Identifier">dynlib</span><span class="Other">:</span> <span class="StringLit">&quot;libcrypto.so|libcrypto.dylib|libcrypto.so.3|libcrypto.so.1.1&quot;</span><span class="Other">,</span>
-    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    
-    
-  </dd>
-</div>
-
-</div>
-<div id="HMAC_CTX_free-procs-all">
-  <div id="HMAC_CTX_free,HMACCtx">
-  <dt><pre><span class="Keyword">proc</span> <a href="#HMAC_CTX_free%2CHMACCtx"><span class="Identifier">HMAC_CTX_free</span></a><span class="Other">(</span><span class="Identifier">ctx</span><span class="Other">:</span> <a href="#HMACCtx"><span class="Identifier">HMACCtx</span></a><span class="Other">)</span> {.<span class="Identifier">importc</span><span class="Other">:</span> <span class="StringLit">&quot;HMAC_CTX_free&quot;</span><span class="Other">,</span> <span class="Identifier">dynlib</span><span class="Other">:</span> <span class="StringLit">&quot;libcrypto.so|libcrypto.dylib|libcrypto.so.3|libcrypto.so.1.1&quot;</span><span class="Other">,</span>
-                                   <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    
-    
-  </dd>
-</div>
-
-</div>
-<div id="HMAC_CTX_new-procs-all">
-  <div id="HMAC_CTX_new">
-  <dt><pre><span class="Keyword">proc</span> <a href="#HMAC_CTX_new"><span class="Identifier">HMAC_CTX_new</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="#HMACCtx"><span class="Identifier">HMACCtx</span></a> {.<span class="Identifier">importc</span><span class="Other">:</span> <span class="StringLit">&quot;HMAC_CTX_new&quot;</span><span class="Other">,</span> <span class="Identifier">dynlib</span><span class="Other">:</span> <span class="StringLit">&quot;libcrypto.so|libcrypto.dylib|libcrypto.so.3|libcrypto.so.1.1&quot;</span><span class="Other">,</span>
-                               <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    
-    
-  </dd>
-</div>
-
-</div>
-<div id="HMAC_Final-procs-all">
-  <div id="HMAC_Final,HMACCtx,pointer,ptr.cuint">
-  <dt><pre><span class="Keyword">proc</span> <a href="#HMAC_Final%2CHMACCtx%2Cpointer%2Cptr.cuint"><span class="Identifier">HMAC_Final</span></a><span class="Other">(</span><span class="Identifier">ctx</span><span class="Other">:</span> <a href="#HMACCtx"><span class="Identifier">HMACCtx</span></a><span class="Other">;</span> <span class="Identifier">output</span><span class="Other">:</span> <span class="Identifier">pointer</span><span class="Other">;</span> <span class="Identifier">outputLen</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">cuint</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">cint</span> {.
-    <span class="Identifier">importc</span><span class="Other">:</span> <span class="StringLit">&quot;HMAC_Final&quot;</span><span class="Other">,</span>
-    <span class="Identifier">dynlib</span><span class="Other">:</span> <span class="StringLit">&quot;libcrypto.so|libcrypto.dylib|libcrypto.so.3|libcrypto.so.1.1&quot;</span><span class="Other">,</span>
-    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    
-    
-  </dd>
-</div>
-
-</div>
-<div id="HMAC_Init_ex-procs-all">
-  <div id="HMAC_Init_ex,HMACCtx,pointer,cint,EvpMd,pointer">
-  <dt><pre><span class="Keyword">proc</span> <a href="#HMAC_Init_ex%2CHMACCtx%2Cpointer%2Ccint%2CEvpMd%2Cpointer"><span class="Identifier">HMAC_Init_ex</span></a><span class="Other">(</span><span class="Identifier">ctx</span><span class="Other">:</span> <a href="#HMACCtx"><span class="Identifier">HMACCtx</span></a><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">pointer</span><span class="Other">;</span> <span class="Identifier">keyLen</span><span class="Other">:</span> <span class="Identifier">cint</span><span class="Other">;</span> <span class="Identifier">md</span><span class="Other">:</span> <a href="#EvpMd"><span class="Identifier">EvpMd</span></a><span class="Other">;</span>
-                  <span class="Identifier">impl</span><span class="Other">:</span> <span class="Identifier">pointer</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">cint</span> {.<span class="Identifier">importc</span><span class="Other">:</span> <span class="StringLit">&quot;HMAC_Init_ex&quot;</span><span class="Other">,</span>
-    <span class="Identifier">dynlib</span><span class="Other">:</span> <span class="StringLit">&quot;libcrypto.so|libcrypto.dylib|libcrypto.so.3|libcrypto.so.1.1&quot;</span><span class="Other">,</span>
-    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    
-    
-  </dd>
-</div>
-
-</div>
-<div id="HMAC_Update-procs-all">
-  <div id="HMAC_Update,HMACCtx,pointer,csize_t">
-  <dt><pre><span class="Keyword">proc</span> <a href="#HMAC_Update%2CHMACCtx%2Cpointer%2Ccsize_t"><span class="Identifier">HMAC_Update</span></a><span class="Other">(</span><span class="Identifier">ctx</span><span class="Other">:</span> <a href="#HMACCtx"><span class="Identifier">HMACCtx</span></a><span class="Other">;</span> <span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">pointer</span><span class="Other">;</span> <span class="Identifier">dataLen</span><span class="Other">:</span> <span class="Identifier">csize_t</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">cint</span> {.
-    <span class="Identifier">importc</span><span class="Other">:</span> <span class="StringLit">&quot;HMAC_Update&quot;</span><span class="Other">,</span>
-    <span class="Identifier">dynlib</span><span class="Other">:</span> <span class="StringLit">&quot;libcrypto.so|libcrypto.dylib|libcrypto.so.3|libcrypto.so.1.1&quot;</span><span class="Other">,</span>
-    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+    <span class="Identifier">importc</span><span class="Other">:</span> <span class="StringLit">&quot;HMAC&quot;</span><span class="Other">,</span> <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     
@@ -248,7 +151,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-08-21 14:43:00 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-09-09 17:12:43 UTC</small>
       </div>
     </div>
   </div>
