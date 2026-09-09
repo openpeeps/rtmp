@@ -130,13 +130,13 @@ proc pushNextFlvTag(client: RtmpClient): bool
 #
 # AMF0 helpers
 #
-proc amf0PutString(s: string, outp: var seq[byte]) =
+proc amf0PutString*(s: string, outp: var seq[byte]) =
   outp.add 0x02.byte
   outp.add ((s.len shr 8) and 0xFF).byte
   outp.add (s.len and 0xFF).byte
   outp.add s.toOpenArrayByte(0, s.len - 1)
 
-proc amf0PutNumber(txid: int, outp: var seq[byte]) =
+proc amf0PutNumber*(txid: int, outp: var seq[byte]) =
   outp.add 0x00.byte
   case txid
   of 1: outp.add @[0x3F'u8,0xF0'u8,0x00'u8,0x00'u8,0x00'u8,0x00'u8,0x00'u8,0x00'u8]
@@ -144,21 +144,21 @@ proc amf0PutNumber(txid: int, outp: var seq[byte]) =
   of 3: outp.add @[0x40'u8,0x08'u8,0x00'u8,0x00'u8,0x00'u8,0x00'u8,0x00'u8,0x00'u8]
   else: outp.add @[0x00'u8,0x00'u8,0x00'u8,0x00'u8,0x00'u8,0x00'u8,0x00'u8,0x00'u8]
 
-proc amf0PutNull(outp: var seq[byte]) =
+proc amf0PutNull*(outp: var seq[byte]) =
   outp.add 0x05.byte
 
-proc amf0PutBool(b: bool, outp: var seq[byte]) =
+proc amf0PutBool*(b: bool, outp: var seq[byte]) =
   outp.add 0x01.byte
   outp.add (if b: 1'u8 else: 0'u8)
 
-proc amf0PutDouble(v: float64, outp: var seq[byte]) =
+proc amf0PutDouble*(v: float64, outp: var seq[byte]) =
   outp.add 0x00.byte
   var tmp = v
   let raw = cast[ptr array[8, uint8]](addr tmp)
   for i in countdown(7, 0):
     outp.add raw[][i]
 
-proc amf0ReadString(b: openArray[byte], i: var int): string =
+proc amf0ReadString*(b: openArray[byte], i: var int): string =
   if i >= b.len or b[i] != 0x02.byte: return ""
   inc i
   if i+1 >= b.len: return ""
@@ -167,7 +167,7 @@ proc amf0ReadString(b: openArray[byte], i: var int): string =
   result = cast[string](b[i ..< i+n])
   i += n
 
-proc amf0ReadNumberAsInt(b: openArray[byte], i: var int): int =
+proc amf0ReadNumberAsInt*(b: openArray[byte], i: var int): int =
   if i >= b.len or b[i] != 0x00.byte: return 0
   inc i
   if i+7 >= b.len: return 0
@@ -263,7 +263,7 @@ proc sendSetChunkSize(client: RtmpClient, size: int) =
   discard client.conn.send(header)
   discard client.conn.send(payload)
 
-proc u32be(b: openArray[byte], i: int): uint32 =
+proc u32be*(b: openArray[byte], i: int): uint32 =
   (uint32(b[i]) shl 24) or (uint32(b[i+1]) shl 16) or (uint32(b[i+2]) shl 8) or uint32(b[i+3])
 
 proc writeControl(conn: Connection, msgType: uint8, payloadLen: int) =
@@ -316,7 +316,7 @@ proc sendUserControl(client: RtmpClient, eventType: uint16, eventData: uint32) =
   p[5] = (eventData and 0xFF).uint8
   discard client.conn.send(p)
 
-proc parseBasicHeader(data: openArray[byte], start: int): (uint8, uint32, int, bool) =
+proc parseBasicHeader*(data: openArray[byte], start: int): (uint8, uint32, int, bool) =
   if start >= data.len: return (0'u8, 0'u32, start, false)
   let b = data[start]
   let fmt = (b shr 6) and 0x03
@@ -588,11 +588,11 @@ proc onDataReceived(conn: Connection, data: openArray[byte]) =
 #
 # ADTS/AAC Streaming parsing and AAC/FLV packing
 #
-proc samplingRateFromIndex(idx: int): int =
+proc samplingRateFromIndex*(idx: int): int =
   let table = [96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000,7350]
   if idx >= 0 and idx < table.len: table[idx] else: 44100
 
-proc parseAdts(fd: cint, pos: int64,
+proc parseAdts*(fd: cint, pos: int64,
                frameLen: var int, headerLen: var int,
                profile: var int, sfIndex: var int, channels: var int): bool =
   var hdr: array[9, uint8]
@@ -611,7 +611,7 @@ proc parseAdts(fd: cint, pos: int64,
   headerLen = if protectionAbsent == 1: 7 else: 9
   true
 
-proc buildAacAsc(profile, sfIndex, channels: int): seq[byte] =
+proc buildAacAsc*(profile, sfIndex, channels: int): seq[byte] =
   var asc = newSeq[byte](2)
   let x = (profile shl 11) or (sfIndex shl 7) or (channels shl 3)
   asc[0] = ((x shr 8) and 0xFF).uint8
@@ -745,13 +745,13 @@ proc startStreamAacAdtsZeroCopy*(client: RtmpClient, filePath: string,
 # RTMP FLV
 #
 type
-  FlvTagHeader = object
+  FlvTagHeader* = object
     tagType*: uint8
     dataSize*: int
     timestamp*: uint32
     posPayload*: int64
 
-proc readFlvHeader(fd: cint): int64 =
+proc readFlvHeader*(fd: cint): int64 =
   var hdr: array[9, uint8]
   if posix.lseek(fd, 0, SEEK_SET) < 0: return -1
   let n = posix.read(fd, addr hdr[0], 9)
@@ -760,7 +760,7 @@ proc readFlvHeader(fd: cint): int64 =
   let headerSize = (int(hdr[5]) shl 24) or (int(hdr[6]) shl 16) or (int(hdr[7]) shl 8) or int(hdr[8])
   int64(headerSize + 4)
 
-proc readFlvTagHeader(fd: cint, pos: int64, th: var FlvTagHeader): bool =
+proc readFlvTagHeader*(fd: cint, pos: int64, th: var FlvTagHeader): bool =
   var h: array[11, uint8]
   if posix.lseek(fd, pos, SEEK_SET) < 0: return false
   let n = posix.read(fd, addr h[0], 11)
@@ -773,14 +773,14 @@ proc readFlvTagHeader(fd: cint, pos: int64, th: var FlvTagHeader): bool =
   th.posPayload = pos + 11
   true
 
-proc flvTagToRtmp(tagType: uint8): (uint8, uint8) =
+proc flvTagToRtmp*(tagType: uint8): (uint8, uint8) =
   case tagType
   of 0x08'u8: (0x08'u8, 4'u8)
   of 0x09'u8: (0x09'u8, 6'u8)
   of 0x12'u8: (0x12'u8, 5'u8)
   else: (0x12'u8, 5'u8)
 
-proc peekNextFlvTagTs(fd: cint, pos: int64, nextTs: var uint32): bool =
+proc peekNextFlvTagTs*(fd: cint, pos: int64, nextTs: var uint32): bool =
   var h: array[11, uint8]
   if posix.lseek(fd, pos, SEEK_SET) < 0: return false
   let n = posix.read(fd, addr h[0], 11)
@@ -889,40 +889,60 @@ proc startStreamFlvZeroCopy*(client: RtmpClient, filePath: string,
   discard pushNextFlvTag(client)
   scheduleSend(client, 0)
 
+type
+  RtmpUrl* = object
+    ## Parsed form of an "rtmp(s)://host[:port]/app/stream" address.
+    scheme*: string
+      ## "rtmp" or "rtmps"
+    host*: string
+    port*: int
+    app*: string
+    streamName*: string
+    tcUrl*: string
+      ## "scheme://host/app" as sent in the connect command
+
+proc parseRtmpUrl*(address: string): RtmpUrl =
+  ## Split an RTMP address into its parts without touching the network.
+  ## Raises AssertionDefect for non-rtmp(s) schemes, like newRtmpClient.
+  let uri = parseUri(address)
+  assert uri.scheme == "rtmp" or uri.scheme == "rtmps"
+  result.scheme = uri.scheme
+  result.host = uri.hostname
+  result.port =
+    if uri.port.len > 0: parseInt(uri.port)
+    else:
+      if uri.scheme == "rtmp": 1935 else: 443
+  let path = uri.path.split("/")
+  let appPart = if path.len > 1: path[1] else: ""
+  result.app = appPart
+  result.streamName = if path.len > 2: path[2] else: ""
+  result.tcUrl = uri.scheme & "://" & uri.hostname & "/" & appPart
+
 proc newRtmpClient*(address: string): RtmpClient =
   ## Create new RTMP client and initiate connection to address.
   ## Address should be in form "rtmp://host[:port]/app/streamKey".
   let loop = newLoop()
-  let uri = parseUri(address)
-  assert uri.scheme == "rtmp" or uri.scheme == "rtmps"
-  let port =
-    if uri.port.len > 0: parseInt(uri.port)
-    else:
-      if uri.scheme == "rtmp": 1935 else: 443
+  let u = parseRtmpUrl(address)
   new(result)
-  let path = uri.path.split("/")
   result.loop = loop
-  result.host = uri.hostname
-  result.port = port
+  result.host = u.host
+  result.port = u.port
 
-  let appPart = if path.len > 1: path[1] else: ""
-  let streamPart = if path.len > 2: path[2] else: ""
-
-  result.app = appPart
-  result.tcUrl = uri.scheme & "://" & uri.hostname & "/" & appPart
-  result.streamName = streamPart
+  result.app = u.app
+  result.tcUrl = u.tcUrl
+  result.streamName = u.streamName
 
   result.handshakeState = hsSendC0C1
   result.stage = stInit
   result.msgStreamId = 1
   result.inChunks = initTable[uint32, ChunkStreamState]()
-  result.scheme = uri.scheme
+  result.scheme = u.scheme
 
   # Store client pointer on the connection's data slot for callbacks
   let client = result
   let clientPtr = cast[pointer](client)
 
-  loop.connect(uri.hostname, port,
+  loop.connect(u.host, u.port,
     onConnect = proc(conn: Connection) =
       conn.data = clientPtr
       client.conn = conn

@@ -26,12 +26,6 @@
 
 ## Requirements
 - Nim >= 2.2.0
-- [powpow](https://github.com/openpeeps/powpow) — the zero-copy file streaming API used here (`Connection.sendFile` with `keepOpen`) lands in the next powpow release (> 0.2.0). Until then, point your build at powpow's devel branch:
-  ```sh
-  git clone https://github.com/openpeeps/powpow ../powpow
-  # then compile with:
-  #   --path:../powpow/src
-  ```
 - OpenSSL (linked by powpow's TLS layer)
 
 ## Examples
